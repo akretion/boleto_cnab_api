@@ -1,0 +1,79 @@
+GIT
+  remote: https://github.com/kivanio/brcobranca.git
+  revision: 689e486b93b32808dfbcbaf8ecd2f5e386ddc567
+  specs:
+    brcobranca (8.0.0)
+      activemodel (>= 3)
+      activesupport (>= 3)
+      parseline (~> 1.0.3)
+      rghost (~> 0.9)
+      rghost_barcode (~> 0.9)
+      unidecoder (>= 1.1.2)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    activemodel (5.1.1)
+      activesupport (= 5.1.1)
+    activesupport (5.1.1)
+      concurrent-ruby (~> 1.0, >= 1.0.2)
+      i18n (~> 0.7)
+      minitest (~> 5.1)
+      tzinfo (~> 1.1)
+    axiom-types (0.1.1)
+      descendants_tracker (~> 0.0.4)
+      ice_nine (~> 0.11.0)
+      thread_safe (~> 0.3, >= 0.3.1)
+    builder (3.2.3)
+    coercible (1.0.0)
+      descendants_tracker (~> 0.0.1)
+    concurrent-ruby (1.0.5)
+    descendants_tracker (0.0.4)
+      thread_safe (~> 0.3, >= 0.3.1)
+    equalizer (0.0.11)
+    grape (0.19.2)
+      activesupport
+      builder
+      hashie (>= 2.1.0)
+      multi_json (>= 1.3.2)
+      multi_xml (>= 0.5.2)
+      mustermann-grape (~> 1.0.0)
+      rack (>= 1.3.0)
+      rack-accept
+      virtus (>= 1.0.0)
+    hashie (3.5.5)
+    i18n (0.8.4)
+    ice_nine (0.11.2)
+    minitest (5.10.2)
+    multi_json (1.12.1)
+    multi_xml (0.6.0)
+    mustermann (1.0.0)
+    mustermann-grape (1.0.0)
+      mustermann (~> 1.0.0)
+    parseline (1.0.3)
+    puma (3.9.1)
+    rack (2.0.3)
+    rack-accept (0.4.5)
+      rack (>= 0.4)
+    rghost (0.9.6)
+    rghost_barcode (0.9)
+    thread_safe (0.3.6)
+    tzinfo (1.2.3)
+      thread_safe (~> 0.1)
+    unidecoder (1.1.2)
+    virtus (1.0.5)
+      axiom-types (~> 0.1)
+      coercible (~> 1.0)
+      descendants_tracker (~> 0.0, >= 0.0.3)
+      equalizer (~> 0.0, >= 0.0.9)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  brcobranca!
+  grape
+  puma
+
+BUNDLED WITH
+   1.11.2
