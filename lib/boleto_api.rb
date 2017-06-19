@@ -81,21 +81,21 @@ module BoletoApi
       post :multi do
         values = JSON.parse(params[:data][:tempfile].read())
       	boletos = []
-	      errors = []
-	      values.each do |boleto_values|
+        errors = []
+        values.each do |boleto_values|
           clazz = Object.const_get("Brcobranca::Boleto::#{boleto_values.delete('bank').camelize}") # TODO ensure presence
           boleto = clazz.new(boleto_values)
-	        if boleto.valid?
-	          boletos << boleto
+          if boleto.valid?
+            boletos << boleto
           else
-	          errors << boleto.errors.messages
+            errors << boleto.errors.messages
           end
-	      end
+        end
         if errors.empty?
           content_type "application/#{params[:type]}"
           header['Content-Disposition'] = "attachment; filename=boletos-#{params[:bank]}.#{params[:type]}"
           env['api.format'] = :binary
-	        Brcobranca::Boleto::Base.lote(boletos, formato: params[:type].to_sym)
+          Brcobranca::Boleto::Base.lote(boletos, formato: params[:type].to_sym)
         else
           errors
         end
@@ -118,12 +118,12 @@ module BoletoApi
         values['pagamentos'].each do |pagamento_values|
           pagamento_values['data_vencimento'] = Date.current # TODO parse some date string parameter instead?
           pagamento = Brcobranca::Remessa::Pagamento.new(pagamento_values)
-	        if pagamento.valid?
-	          pagamentos << pagamento
+          if pagamento.valid?
+            pagamentos << pagamento
           else
-	          errors << pagamento.errors.messages
+            errors << pagamento.errors.messages
           end
-	      end
+        end
         if errors.empty?
           values[:pagamentos] = pagamentos
           clazz = Object.const_get("Brcobranca::Remessa::#{params[:type].camelize}::#{params[:bank].camelize}")
@@ -157,7 +157,7 @@ module BoletoApi
         pagamentos.map! do |p|
           Hash[RETORNO_FIELDS.map{|sym| [sym, p.send(sym)]}]
         end
-    	  JSON.generate(pagamentos)
+        JSON.generate(pagamentos)
       end
     end
   end
