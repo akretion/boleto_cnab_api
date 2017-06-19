@@ -15,4 +15,4 @@ EXPOSE 9292
 USER ubuntu
 
 # NOTE uncomment to --bind option to listen outside of the Docker container
-CMD bundle exec puma config.ru #--bind=tcp://0.0.0.0:9292
+CMD bundle exec puma config.ru --bind=tcp://0.0.0.0:9292
