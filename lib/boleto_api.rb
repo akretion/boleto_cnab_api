@@ -65,7 +65,7 @@ module BoletoApi
           env['api.format'] = :binary
           boleto.send("to_#{params[:type]}".to_sym)
         else
-          boleto.errors.messages
+          error!(boleto.errors.messages, 400)
         end
       end
 
@@ -97,7 +97,7 @@ module BoletoApi
           env['api.format'] = :binary
           Brcobranca::Boleto::Base.lote(boletos, formato: params[:type].to_sym)
         else
-          errors
+          error!(errors, 400)
         end
       end
     end
@@ -134,7 +134,7 @@ module BoletoApi
             [remessa.errors.messages] + errors
           end
         else
-          errors
+          error!(errors, 400)
         end
       end
     end
