@@ -3,6 +3,25 @@ require 'grape'
 
 
 module BoletoApi
+
+  def self.get_boleto(bank, values)
+   clazz = Object.const_get("Brcobranca::Boleto::#{bank.camelize}")
+   date_fields = %w[data_documento data_vencimento data_processamento]
+   date_fields.each do |date_field|
+      values[date_field] = Date.parse(values[date_field]) if values[date_field]
+    end
+    clazz.new(values)
+  end
+
+  def self.get_pagamento(values)
+   date_fields = %w[data_vencimento data_emissao data_desconto data_segundo_desconto data_multa]
+   date_fields.each do |date_field|
+      values[date_field] = Date.parse(values[date_field]) if values[date_field]
+    end
+   values['data_vencimento'] ||= Date.current
+   Brcobranca::Remessa::Pagamento.new(values)
+  end
+
   class Server < Grape::API
     version 'v1', using: :header, vendor: 'Akretion'
     format :json
@@ -20,8 +39,7 @@ module BoletoApi
       end
       get :validate do
         values = JSON.parse(params[:data])
-        clazz = Object.const_get("Brcobranca::Boleto::#{params[:bank].camelize}")
-        boleto = clazz.new(values)
+        boleto = BoletoApi.get_boleto(params[:bank], values)
         if boleto.valid?
           true
         else
@@ -40,8 +58,7 @@ module BoletoApi
       end
       get :nosso_numero do
         values = JSON.parse(params[:data])
-        clazz = Object.const_get("Brcobranca::Boleto::#{params[:bank].camelize}")
-        boleto = clazz.new(values)
+        boleto = BoletoApi.get_boleto(params[:bank], values)
         if boleto.valid?
           boleto.nosso_numero_boleto
         else
@@ -60,8 +77,7 @@ module BoletoApi
       end
       get do
         values = JSON.parse(params[:data])
-        clazz = Object.const_get("Brcobranca::Boleto::#{params[:bank].camelize}")
-        boleto = clazz.new(values)
+        boleto = BoletoApi.get_boleto(params[:bank], values)
         if boleto.valid?
           content_type "application/#{params[:type]}"
           header['Content-Disposition'] = "attachment; filename=boleto-#{params[:bank]}.#{params[:type]}"
@@ -87,8 +103,8 @@ module BoletoApi
       	boletos = []
         errors = []
         values.each do |boleto_values|
-          clazz = Object.const_get("Brcobranca::Boleto::#{boleto_values.delete('bank').camelize}") # TODO ensure presence
-          boleto = clazz.new(boleto_values)
+          bank = "Brcobranca::Boleto::#{boleto_values.delete('bank').camelize}"
+          boleto = BoletoApi.get_boleto(bank, boleto_values)
           if boleto.valid?
             boletos << boleto
           else
@@ -124,8 +140,7 @@ module BoletoApi
         pagamentos = []
       	errors = []
         values['pagamentos'].each do |pagamento_values|
-          pagamento_values['data_vencimento'] = Date.current # TODO parse some date string parameter instead?
-          pagamento = Brcobranca::Remessa::Pagamento.new(pagamento_values)
+          pagamento = BoletoApi.get_pagamento(pagamento_values)
           if pagamento.valid?
             pagamentos << pagamento
           else
