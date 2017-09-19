@@ -9,7 +9,7 @@ E interessante poder usar o projeto brcobranca a partir de outras linguagens na 
 ```
 git clone https://github.com/akretion/boleto_api.git
 cd boleto_api
-docker build . -t akretion/boleto_api
+docker build -t akretion/boleto_api .
 docker run -ti -p 9292:9292 akretion/boleto_api
 ```
 

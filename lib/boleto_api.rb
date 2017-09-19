@@ -152,6 +152,7 @@ module BoletoApi
           clazz = Object.const_get("Brcobranca::Remessa::#{params[:type].camelize}::#{params[:bank].camelize}")
           remessa = clazz.new(values)
           if remessa.valid?
+            env['api.format'] = :binary
             remessa.gera_arquivo()
           else
             [remessa.errors.messages] + errors
