@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/akretion/brcobranca.git
-  revision: 15d1785fa9e996bc9cc254f41c0939e1a10723dc
+  revision: 0659b21f91167372745c988fe719064fdb566447
   specs:
     brcobranca (8.0.0)
       activemodel (>= 3)
