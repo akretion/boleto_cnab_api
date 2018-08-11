@@ -46,9 +46,9 @@ POST /retorno
         requires :data, type: File, desc: 'txt of the retorno file'
  ```
 
-Nota importante: os campos datas devem estar no formato YYYY/MM/DD
-O API esta documentato com detalhes no codigo aqui: https://github.com/akretion/boleto_api/blob/master/lib/boleto_api.rb
+Nota: os campos datas devem estar no formato YYYY/MM/DD
 
+O API esta documentato com mais detalhes no codigo aqui: https://github.com/akretion/boleto_api/blob/master/lib/boleto_api.rb
 
 # Como testar
 
