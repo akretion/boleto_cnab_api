@@ -9,9 +9,9 @@ Mais especificamente, a [Akretion](http://www.akretion.com) que é a empresa que
 
 Imprime *boletos*, gera arquivos de *remessa* e lê os arquivos de *retorno* nos formatos CNAB 240, CNAB 400 para os 15 principais bancos do Brasil (Banco do Brasil, Banco do Nordeste, Banco de Brasília, Banestes, Banrisul, Bradesco,Caixa, Citibank, HSBC, Itaú, Santander, Sicoob, Sicredi, UNICRED, CECRED, CREDISIS...)
 
-# API REST
+# API
 
-```
+```ruby
 # validar os dados de um boleto:
 GET /boleto/validate
         requires :bank, type: String, desc: 'Bank'
@@ -52,7 +52,7 @@ O API esta documentato com mais detalhes no codigo aqui: https://github.com/akre
 
 # Como testar
 
-```
+```bash
 git clone https://github.com/akretion/boleto_api.git
 cd boleto_api
 docker build -t akretion/boleto_api .
@@ -62,8 +62,12 @@ docker run -ti -p 9292:9292 akretion/boleto_api
 ## Bash
 
 Por examplo, para imprimir uma lista de boletos é preciso criar um arquivo temporario com os boletos em formato json e depois fazer um POST do arquivo:
-```
-echo '[{"valor":5.0,"cedente":"Kivanio Barbosa","documento_cedente":"12345678912","sacado":"Claudio Pozzebom","sacado_documento":"12345678900","agencia":"0810","conta_corrente":"53678","convenio":12387,"nosso_numero":"12345678","bank":"itau"},{"valor": 10.00,"cedente": "PREFEITURA MUNICIPAL DE VILHENA","documento_cedente": "04092706000181","sacado": "João Paulo Barbosa","sacado_documento": "77777777777","agencia": "1825","conta_corrente": "0000528","convenio": "245274","nosso_numero": "000000000000001","bank":"caixa"}]' > /tmp/boletos_data.json
+```bash
+echo '[{"valor":5.0,"cedente":"Kivanio Barbosa","documento_cedente":"12345678912","sacado":"Claudio Pozzebom",\
+"sacado_documento":"12345678900","agencia":"0810","conta_corrente":"53678","convenio":12387,"nosso_numero":"12345678","bank":"itau"},\
+{"valor": 10.00,"cedente": "PREFEITURA MUNICIPAL DE VILHENA","documento_cedente": "04092706000181","sacado": "João Paulo Barbosa",\
+"sacado_documento": "77777777777","agencia": "1825","conta_corrente": "0000528","convenio": "245274","nosso_numero": "000000000000001","bank":"caixa"}]'\
+> /tmp/boletos_data.json
 curl -X POST -F type=pdf -F 'data=@/tmp/boletos_data.json' localhost:9292/api/boleto/multi > /tmp/boletos.pdf
 ```
 Vc pode então conferir os boletos gerados no arquivo ```/tmp/boletos.pdf```
