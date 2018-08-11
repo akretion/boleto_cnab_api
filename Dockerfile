@@ -1,18 +1,18 @@
-FROM akretion/voodoo-ruby:latest
+FROM ruby:2.5.1-alpine3.7
+MAINTAINER "raphael.valyi@akretion.com"
 
-LABEL maintainer "raphael.valyi@akretion.com"
+WORKDIR /usr/src/app
+COPY . .
+RUN addgroup -S app && adduser -S -G app app
+RUN mkdir -p tmp log && chown app:app tmp log
 
-USER root
+RUN apk add build-base ghostscript git
 
-RUN DEBIAN_FRONTEND=noninteractive && \
-    apt-get update && \
-    apt-get install -y ghostscript && \
-    apt-get clean
+# throw errors if Gemfile has been modified since Gemfile.lock
+RUN bundle config --global frozen 1
+RUN bundle install
+RUN apk del build-base git
 
-ADD . /workspace
-RUN bundle install && mkdir -p tmp log && chown ubuntu:ubuntu tmp log
 EXPOSE 9292
-USER ubuntu
-
-# NOTE uncomment to --bind option to listen outside of the Docker container
-CMD bundle exec puma config.ru --bind=tcp://0.0.0.0:9292
+USER app
+CMD bundle exec puma config.ru
