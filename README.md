@@ -1,4 +1,4 @@
-# boleto API
+# sobre o projeto boleto_cnab_api
 
 O projeto de gestão de boletos, remessas e retornos bancarios https://github.com/kivanio/brcobranca é muito bem feito, bem testado e mantido.
 
