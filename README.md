@@ -73,6 +73,8 @@ curl -X POST -F type=pdf -F 'data=@/tmp/boletos_data.json' localhost:9292/api/bo
 Vc pode então conferir os boletos gerados no arquivo ```/tmp/boletos.pdf```
 
 ## Python
+
 ```
-TODO ver nos modulos Odoo: https://github.com/akretion/odoo-boleto-cnab
+TODO
 ```
+(ver os examplos nos modulos Odoo: https://github.com/akretion/odoo-boleto-cnab)
