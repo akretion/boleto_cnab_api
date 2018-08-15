@@ -7,7 +7,7 @@ Mais especificamente, a [Akretion](http://www.akretion.com) que é a empresa que
 
 # funcionalidades
 
-Imprime *boletos*, gera arquivos de *remessa* e lê os arquivos de *retorno* nos formatos CNAB 240, CNAB 400 para os 15 principais bancos do Brasil (Banco do Brasil, Banco do Nordeste, Banco de Brasília, Banestes, Banrisul, Bradesco,Caixa, Citibank, HSBC, Itaú, Santander, Sicoob, Sicredi, UNICRED, CECRED, CREDISIS...)
+Imprime *boletos*, gera arquivos de *remessa* e lê os arquivos de *retorno* nos formatos CNAB 240, CNAB 400 para os 15 principais bancos do Brasil (Banco do Brasil, Banco do Nordeste, Banco de Brasília, Banestes, Banrisul, Bradesco,Caixa, Citibank, HSBC, Itaú, Santander, Sicoob, Sicredi, UNICRED, CECRED, CREDISIS...). Mas o grande barrato desse projeto é que fazemos isso com menos de 200 linhas de codigo! Ja comparou quantas linhas de de codigo vc tem que manter sozinho ou quase se for re-fazer na linguagem que vc quer tudo que o brcobranca ja faz? Seriam dezenas de milhares de linhas e vc nunca teria uma qualidade tao boa...
 
 # API
 
