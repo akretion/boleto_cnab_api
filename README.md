@@ -2,12 +2,12 @@
 
 O projeto de gestão de boletos, remessas e retornos bancarios https://github.com/kivanio/brcobranca é muito bem feito, bem testado e mantido.
 
-E interessante poder usar o projeto brcobranca (escrito em Ruby) a partir de outras linguagens na forma de um micro-serviço REST.
+É interessante poder usar o projeto brcobranca (escrito em Ruby) a partir de outras linguagens na forma de um micro-serviço REST.
 Mais especificamente, a [Akretion](http://www.akretion.com) que é a empresa que lidera a localização do Odoo no Brasil desde 2009 https://github.com/OCA/l10n-brazil e co-criou a fundação OCA usa esse projeto para gerenciar boletos a partir do ERP Odoo (feito em Python).
 
 # funcionalidades
 
-Imprime *boletos*, gera arquivos de *remessa* e lê os arquivos de *retorno* nos formatos CNAB 240, CNAB 400 para os 15 principais bancos do Brasil (Banco do Brasil, Banco do Nordeste, Banco de Brasília, Banestes, Banrisul, Bradesco,Caixa, Citibank, HSBC, Itaú, Santander, Sicoob, Sicredi, UNICRED, CECRED, CREDISIS...). Mas o grande barrato desse projeto é que fazemos isso com menos de 200 linhas de codigo! Ja comparou quantas linhas de de codigo vc tem que manter sozinho ou quase se for re-fazer na linguagem que vc quer tudo que o brcobranca ja faz? Seriam dezenas de milhares de linhas e vc nunca teria uma qualidade tao boa...
+Imprime *boletos*, gera arquivos de *remessa* e lê os arquivos de *retorno* nos formatos CNAB 240, CNAB 400 para os 15 principais bancos do Brasil (Banco do Brasil, Banco do Nordeste, Banco de Brasília, Banestes, Banrisul, Bradesco,Caixa, Citibank, HSBC, Itaú, Santander, Sicoob, Sicredi, UNICRED, CECRED, CREDISIS...). Mas o grande barato desse projeto é que fazemos isso com menos de 200 linhas de código! Ja comparou quantas linhas de de codigo vc tem que manter sozinho ou quase se for re-fazer na linguagem que vc quer tudo que o brcobranca ja faz? Seriam dezenas de milhares de linhas e vc nunca teria uma qualidade tão boa...
 
 # API
 
