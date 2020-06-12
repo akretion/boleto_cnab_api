@@ -1,17 +1,18 @@
-FROM ruby:2.5-alpine
+FROM ruby:2.5
 MAINTAINER "raphael.valyi@akretion.com"
 
 WORKDIR /usr/src/app
 COPY . .
-RUN addgroup -S app && adduser -S -G app app
+RUN addgroup app
+RUN adduser app --ingroup=app --disabled-password --quiet --gecos ''
 RUN mkdir -p tmp log && chown app:app tmp log
 
-RUN apk add build-base ghostscript git
+RUN apt-get update
+RUN apt-get install -y --no-install-recommends build-essential ghostscript git ruby-dev bundler
 
 # throw errors if Gemfile has been modified since Gemfile.lock
 RUN bundle config --global frozen 1
 RUN bundle install
-RUN apk del build-base git
 
 EXPOSE 9292
 USER app
