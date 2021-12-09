@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/akretion/brcobranca.git
-  revision: 2f058c3f5c38864a321697613eb5db6f2b2309a5
+  revision: 2b0ccd53179b387342dd15a44b0e43abfc24061a
   specs:
     brcobranca (9.2.4)
       parseline (~> 1.0.3)
