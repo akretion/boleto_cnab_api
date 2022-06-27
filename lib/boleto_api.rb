@@ -103,7 +103,7 @@ module BoletoApi
       	boletos = []
         errors = []
         values.each do |boleto_values|
-          bank = "Brcobranca::Boleto::#{boleto_values.delete('bank').camelize}"
+          bank = boleto_values.delete('bank').camelize
           boleto = BoletoApi.get_boleto(bank, boleto_values)
           if boleto.valid?
             boletos << boleto
