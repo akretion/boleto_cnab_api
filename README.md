@@ -79,7 +79,7 @@ Vc pode então conferir os boletos gerados no arquivo ```/tmp/boletos.pdf```
 ```
 TODO
 ```
-(ver os examplos nos modulos Odoo: https://github.com/akretion/odoo-boleto-cnab)
+(ver os examplos nos modulos Odoo: https://github.com/OCA/l10n-brazil/tree/14.0/l10n_br_account_payment_brcobranca)
 
 ## Java
 
