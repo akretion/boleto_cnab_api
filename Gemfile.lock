@@ -1,23 +1,23 @@
 GIT
   remote: https://github.com/kivanio/brcobranca.git
-  revision: 33c04b4ad4d509375eab941a65ef8cfd5744cff2
+  revision: 7bad3e5da8f69fb1ef8e1892deecc12951f2f404
   specs:
-    brcobranca (10.0.0)
+    brcobranca (10.1.0)
       activesupport (>= 5.2.6)
       parseline (>= 1.0.3)
-      rghost (>= 0.9)
+      rghost (>= 0.9.8)
       rghost_barcode (>= 0.9)
 
 GEM
   remote: https://rubygems.org/
   specs:
-    activesupport (7.0.4)
+    activesupport (7.0.4.3)
       concurrent-ruby (~> 1.0, >= 1.0.2)
       i18n (>= 1.6, < 2)
       minitest (>= 5.1)
       tzinfo (~> 2.0)
     builder (3.2.4)
-    concurrent-ruby (1.1.10)
+    concurrent-ruby (1.2.2)
     dry-container (0.11.0)
       concurrent-ruby (~> 1.0)
     dry-core (0.8.1)
@@ -41,7 +41,7 @@ GEM
       rack-accept
     i18n (1.12.0)
       concurrent-ruby (~> 1.0)
-    minitest (5.16.3)
+    minitest (5.18.0)
     mustermann (3.0.0)
       ruby2_keywords (~> 0.0.1)
     mustermann-grape (1.0.2)
@@ -50,13 +50,13 @@ GEM
     parseline (1.0.3)
     puma (5.6.5)
       nio4r (~> 2.0)
-    rack (3.0.0)
+    rack (3.0.6.1)
     rack-accept (0.4.5)
       rack (>= 0.4)
-    rghost (0.9.7)
+    rghost (0.9.8)
     rghost_barcode (0.9)
     ruby2_keywords (0.0.5)
-    tzinfo (2.0.5)
+    tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)
 
 PLATFORMS
@@ -68,4 +68,4 @@ DEPENDENCIES
   puma
 
 BUNDLED WITH
-   2.1.4
+   2.4.18
