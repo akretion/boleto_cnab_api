@@ -1,8 +1,8 @@
 GIT
   remote: https://github.com/kivanio/brcobranca.git
-  revision: b537cfdf3706749568e4e53580abffaeb431a221
+  revision: 58bea9a60eaac09d01342e115c7b10156989f3a7
   specs:
-    brcobranca (10.1.0)
+    brcobranca (11.0.0)
       activesupport (>= 5.2.6)
       fast_blank
       parseline (>= 1.0.3)
@@ -48,9 +48,9 @@ GEM
       ruby2_keywords (~> 0.0.1)
     mustermann-grape (1.0.2)
       mustermann (>= 1.0.0)
-    nio4r (2.5.9)
+    nio4r (2.7.0)
     parseline (1.0.3)
-    puma (6.3.1)
+    puma (6.4.2)
       nio4r (~> 2.0)
     rack (3.0.6.1)
     rack-accept (0.4.5)

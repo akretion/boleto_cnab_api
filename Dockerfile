@@ -1,4 +1,4 @@
-FROM ruby:3.2.0-slim
+FROM ruby:3.3.0-slim
 MAINTAINER "raphael.valyi@akretion.com"
 
 WORKDIR /usr/src/app
