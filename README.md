@@ -146,17 +146,18 @@ root@f265658f13ab:/usr/local/bundle/bundler/gems/brcobranca-7bad3e5da8f6# vim li
 
 Se for preciso podemos acompanhar o LOG para ver se há algum erro ou para verificar "imprimindo" o valor de alguma variável com o comando "puts"(https://www.codesdope.com/ruby-putsputsputs/) é possível em outra aba ou terminal rodar o comando
 ```bash
-$ docker logs -f f265658f13ab
+$ docker run -ti -p 9292:9292 akretion/boleto_cnab_api-3_3_2_slim
 Puma starting in single mode...
-* Puma version: 5.6.5 (ruby 3.2.0-p0) ("Birdie's Version")
+* Puma version: 6.4.2 (ruby 3.3.2-p78) ("The Eagle of Durango")
 *  Min threads: 0
 *  Max threads: 5
 *  Environment: development
-*          PID: 7
-/usr/local/bundle/gems/rack-3.0.6.1/lib/rack/auth/digest.rb:8: warning: Rack::Auth::Digest is deprecated and will be removed in Rack 3.1
+*          PID: 6
 * Listening on http://0.0.0.0:9292
 Use Ctrl-C to stop
-
+^C- Gracefully stopping, waiting for requests to finish
+=== puma shutdown: 2024-06-07 15:28:38 +0000 ===
+- Goodbye!
 ```
 
 IMPORTANTE: por algum motivo as alterações dentro do container só tem efeito na primeira vez que o arquivo é Salvo, uma segunda alteração não tem efeito, isso pode ser algo referente ao comportamento da imagem, ou do docker ou do docker-compose, já que nos testes realizados esse container é iniciado e usado por outro container rodando o Odoo, é preciso investigar melhor para entender se isso é algo normal e já esperado ou se teria uma forma de corrigir, porque devido a isso para testar dessa forma está sendo necessário alterar uma vez e se for preciso fazer outra alteração sair do container fazer um kill e inicia-lo novamente.
