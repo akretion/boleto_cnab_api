@@ -1,4 +1,4 @@
-FROM ruby:3.3.0-slim
+FROM ruby:3.3.2-slim
 MAINTAINER "raphael.valyi@akretion.com"
 
 WORKDIR /usr/src/app
@@ -10,7 +10,11 @@ RUN mkdir -p tmp log && chown app:app tmp log
 RUN apt-get update
 RUN apt-get install -y --no-install-recommends build-essential ghostscript git ruby-dev bundler
 
-RUN gem install bundler:2.4.18
+RUN gem install bundler:2.5.11 --no-document \
+   && bundle install --quiet \
+   && rm -rf /usr/local/bundle/cache/*.gem \
+   && find /usr/local/bundle/gems/ -name "*.c" -delete \
+   && find /usr/local/bundle/gems/ -name "*.o" -delete
 
 # throw errors if Gemfile has been modified since Gemfile.lock
 RUN bundle config --global frozen 1
