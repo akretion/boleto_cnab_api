@@ -53,10 +53,7 @@ O API está documentado com mais detalhes no código aqui: https://github.com/ak
 # Como rodar o micro-serviço
 
 ```bash
-git clone https://github.com/akretion/boleto_cnab_api.git
-cd boleto_cnab_api
-docker build -t akretion/boleto_cnab_api .
-docker run -ti -p 9292:9292 akretion/boleto_cnab_api
+docker run -p 9292:9292 ghcr.io/akretion/boleto_cnab_api
 ```
 
 # Exemplos de como consumir o serviço usando sua linguagem preferida:
