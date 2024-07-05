@@ -1,24 +1,30 @@
-FROM ruby:3.3.2-slim
+FROM alpine:3.20.0
 MAINTAINER "raphael.valyi@akretion.com"
 
 WORKDIR /usr/src/app
 COPY . .
-RUN addgroup app
-RUN adduser app --ingroup=app --disabled-password --quiet --gecos ''
-RUN mkdir -p tmp log && chown app:app tmp log
+RUN addgroup -S app && adduser -S -G app app && \
+    mkdir -p tmp log && chown app:app tmp log
 
-RUN apt-get update
-RUN apt-get install -y --no-install-recommends build-essential ghostscript git ruby-dev bundler
+RUN set -eux; \
+        apk update && \
+        apk upgrade && \
+        apk add --no-cache \
+           build-base \
+           ghostscript \
+           git \
+           ruby-dev \
+        && rm -rf /var/cache/apk/* \
+        ;
 
-RUN gem install bundler:2.5.11 --no-document \
-   && bundle install --quiet \
+RUN set -eux; \
+   gem install bundler:2.5.11 --no-document \
+   && bundle install \
    && rm -rf /usr/local/bundle/cache/*.gem \
-   && find /usr/local/bundle/gems/ -name "*.c" -delete \
-   && find /usr/local/bundle/gems/ -name "*.o" -delete
+   ;
 
 # throw errors if Gemfile has been modified since Gemfile.lock
-RUN bundle config --global frozen 1
-RUN bundle install
+RUN bundle config --global frozen 1 && bundle install
 
 EXPOSE 9292
 USER app
