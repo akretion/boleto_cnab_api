@@ -38,6 +38,8 @@ jobs:
         with:
           context: .
           file: Dockerfile
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=inline
           push: true
