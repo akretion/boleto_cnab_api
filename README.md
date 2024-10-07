@@ -5,9 +5,11 @@ O projeto de gestão de Boletos, Remessas e Retornos Bancários https://github.c
 É interessante poder usar o projeto BRCobranca (escrito em Ruby) a partir de outras linguagens na forma de um micro-serviço REST.
 Mais especificamente, a [Akretion](http://www.akretion.com) que é a empresa que lidera a localização do Odoo no Brasil desde 2009 https://github.com/OCA/l10n-brazil e co-criou a fundação [OCA](https://odoo-community.org/) usa esse projeto para gerenciar Boletos, Remessas e Retornos a partir do ERP Odoo (feito em Python, módulo específico https://github.com/OCA/l10n-brazil/tree/14.0/l10n_br_account_payment_brcobranca).
 
+A imagem usada no projeto é do OS [Alpine](https://hub.docker.com/_/alpine), o motivo é que por ser um Micro-Serviço quanto menor a imagem melhor e apesar de existir dentro das imagens [Ruby](https://hub.docker.com/_/ruby) tanto a opção Debian quanto Alpine a imagem criada a partir da versão "pura" acaba sendo menor( Ruby-Debian 746MB | Ruby-Alpine 565MB | Alpine 523MB ), existem diferenças entre o [Debian](https://pt.wikipedia.org/wiki/Debian) e o [Alpine](https://pt.wikipedia.org/wiki/Alpine_Linux) basicamente "na superfície" são alguns nomes de pacote e o instalador de pacotes, no Debian apt-get e no Alpine apk, outros comandos Linux são iguais, em caso de algum erro complexo o Debian pode acabar sendo usado.
+
 # Funcionalidades
 
-Imprime *Boletos*, gera arquivos de *Remessa* e lê os arquivos de *Retorno* nos formatos CNAB 240, CNAB 400 para os 16 principais bancos do Brasil (Banco do Brasil, Banco do Nordeste, Banestes, Santander, Banrisul, Banco de Brasília, Caixa, Bradesco, Itaú, HSBC, Sicredi, Sicoob, AILOS, Unicred, CREDISIS e Citibank). Mas o grande barato desse projeto é que fazemos isso com menos de 200 linhas de código! Já comparou quantas linhas de de código você tem que manter sozinho ou quase se for re-fazer na linguagem que você quer tudo que o BRCobranca já faz? Seriam dezenas de milhares de linhas e você nunca teria uma qualidade tão boa...
+Imprime **Boletos**, gera arquivos de **Remessa** e lê os arquivos de **Retorno** nos formatos CNAB 240, CNAB 400 para os 16 principais bancos do Brasil (Banco do Brasil, Banco do Nordeste, Banestes, Santander, Banrisul, Banco de Brasília, Caixa, Bradesco, Itaú, HSBC, Sicredi, Sicoob, AILOS, Unicred, CREDISIS e Citibank). Mas o grande barato desse projeto é que fazemos isso com menos de 200 linhas de código! Já comparou quantas linhas de de código você tem que manter sozinho ou quase se for re-fazer na linguagem que você quer tudo que o BRCobranca já faz? Seriam dezenas de milhares de linhas e você nunca teria uma qualidade tão boa...
 
 # API
 
@@ -88,18 +90,17 @@ TODO (contribuições bem vindas)
 
 No arquivo Gemfile.lock é possível alterar o repositório e o commit específico que será usado na criação da imagem, o que é necessário durante uma correção, atualização ou implementação de um novo caso, um exemplo simples pode ser visto nesse PR https://github.com/akretion/boleto_cnab_api/pull/11/files , mas também é possível alterar o Dockerfile para criar uma imagem de teste onde seja possível editar os arquivos dentro do container (o que evita subir um commit desnecessário ou com erro), para isso no arquivo Dockerfile são feitas as seguintes alterações:
 
-Instalar Editores de texto, por exemplo vim ou nano, configurar o locales para o pt_BR.UTF-8 para evitar erro com caracteres e alterar o usuário app para o root para poder editar os arquivos
+Instalar algum editor de texto, por exemplo VIM ou Nano (por padrão o VI já está instalado mas caracteres UTF-8 não são mostrados corretamente) e alterar o usuário **app** para o **root** para poder editar os arquivos
 ```bash
--RUN apt-get install -y --no-install-recommends build-essential ghostscript git ruby-dev bundler
-+RUN apt-get install -y --no-install-recommends build-essential ghostscript git ruby-dev bundler vim locales nano
-+
-+RUN sed -i -e 's/# pt_BR.UTF-8 UTF-8/pt_BR.UTF-8 UTF-8/' /etc/locale.gen && \
-+    dpkg-reconfigure --frontend=noninteractive locales && \
-+    update-locale LANG=pt_BR.UTF-8
+            git \
+            ruby-dev \
++           vim \
++           nano \
+         && rm -rf /var/cache/apk/* \
+         ;
 
 -USER app
 +USER root
-
 ```
 
 Criação da imagem
@@ -113,48 +114,66 @@ Localizar o container ID
 
 $ docker ps
 CONTAINER ID   IMAGE                             COMMAND                  CREATED             STATUS             PORTS                                                 NAMES
-f265658f13ab   4abc53b9d1a2                      "/bin/sh -c 'bundle …"   About an hour ago   Up About an hour   9292/tcp
+1ea95da3a3c3   akretion/boleto_cnab_api-teste   "/bin/sh -c 'bundle …"   4 minutes ago   Up 4 minutes   0.0.0.0:9292->9292/tcp, :::9292->9292/tcp   eloquent_noether
+```
 
-Acessando o container
-
-$ docker exec -it <container-id> /bin/bash
+Acessando o container (No Debian usa /bin/bash no Alpine /bin/sh)
+```bash
+$ docker exec -it <container-id> /bin/sh
 
 O valor <container-id> varia, nesse exemplo o comando seria
 
-$ docker exec -it f265658f13ab /bin/bash
-
-Dentro do container, é preciso localizar a pasta onde está instalada a biblioteca, no exemplo é usado o comando find
-
-root@f265658f13ab:/usr/src/app# find /usr -name unicred.rb
-/usr/local/bundle/bundler/gems/brcobranca-7bad3e5da8f6/lib/brcobranca/retorno/cnab400/unicred.rb
-/usr/local/bundle/bundler/gems/brcobranca-7bad3e5da8f6/lib/brcobranca/remessa/cnab240/unicred.rb
-/usr/local/bundle/bundler/gems/brcobranca-7bad3e5da8f6/lib/brcobranca/remessa/cnab400/unicred.rb
-/usr/local/bundle/bundler/gems/brcobranca-7bad3e5da8f6/lib/brcobranca/boleto/unicred.rb
-
-A partir disso é possível realizar alterações necessárias
-
-root@f265658f13ab:/usr/src/app# cd /usr/local/bundle/bundler/gems/brcobranca-7bad3e5da8f6/
-root@f265658f13ab:/usr/local/bundle/bundler/gems/brcobranca-7bad3e5da8f6# ls
-CHANGELOG.md  HISTORY.md  README.md  brcobranca.gemspec  lib
-Gemfile       LICENSE	  Rakefile   docs		 spec
-root@f265658f13ab:/usr/local/bundle/bundler/gems/brcobranca-7bad3e5da8f6# vim lib/brcobranca/boleto/unicred.rb
-
+$ docker exec -it 1ea95da3a3c3 /bin/sh
 ```
 
-Se for preciso podemos acompanhar o LOG para ver se há algum erro ou para verificar "imprimindo" o valor de alguma variável com o comando "puts"(https://www.codesdope.com/ruby-putsputsputs/) é possível em outra aba ou terminal rodar o comando
+Dentro do container é preciso localizar a pasta onde está instalada a biblioteca, no exemplo é usado o comando **find** e a partir disso é possível realizar alterações necessárias
 ```bash
-$ docker run -ti -p 9292:9292 akretion/boleto_cnab_api-3_3_2_slim
+/usr/src/app # find /usr -name unicred.rb
+/usr/lib/ruby/gems/3.3.0/bundler/gems/brcobranca-cd928e87554b/lib/brcobranca/retorno/cnab400/unicred.rb
+/usr/lib/ruby/gems/3.3.0/bundler/gems/brcobranca-cd928e87554b/lib/brcobranca/remessa/cnab240/unicred.rb
+/usr/lib/ruby/gems/3.3.0/bundler/gems/brcobranca-cd928e87554b/lib/brcobranca/remessa/cnab400/unicred.rb
+```
+
+A partir disso é possível realizar alterações necessárias, por exemplo verificar o valor de alguma variável "imprimindo" no LOG com o comando "puts" (algumas referencias https://www.dotnetperls.com/console-ruby https://www.rubyguides.com/2018/10/puts-vs-print/ http://ruby-for-beginners.rubymonstas.org/writing_methods/printing.html )
+```bash
+/usr/src/app # vim /usr/lib/ruby/gems/3.3.0/bundler/gems/brcobranca-cd928e87554b/lib/brcobranca/
+boleto/unicred.rb
+
+      def codigo_barras_segunda_parte
+        puts "TESTE puts algum valor qualquer " + "#{agencia}"
+        "#{agencia}#{conta_corrente}#{conta_corrente_dv}#{nosso_numero}#{nosso_numero_dv}"
+      end
+    end
+```
+
+Nesse exemplo ao criar um Boleto do UNICRED é possível ver no LOG o resultado do "puts"
+```bash
+$ docker logs -f 28f2881e4dd7
 Puma starting in single mode...
-* Puma version: 6.4.2 (ruby 3.3.2-p78) ("The Eagle of Durango")
+* Puma version: 6.4.2 (ruby 3.3.3-p89) ("The Eagle of Durango")
 *  Min threads: 0
 *  Max threads: 5
 *  Environment: development
-*          PID: 6
+*          PID: 1
 * Listening on http://0.0.0.0:9292
 Use Ctrl-C to stop
-^C- Gracefully stopping, waiting for requests to finish
-=== puma shutdown: 2024-06-07 15:28:38 +0000 ===
+TESTE puts algum valor qualquer 1234
+```
+
+Se a imagem estiver sendo iniciada dentro de um **Docker Compose**, por exemplo por um projeto Odoo é possível ver o LOG usando:
+```bash
+$ docker logs -f 28f2881e4dd7
+Puma starting in single mode...
+* Puma version: 6.4.2 (ruby 3.3.3-p89) ("The Eagle of Durango")
+*  Min threads: 0
+*  Max threads: 5
+*  Environment: development
+*          PID: 1
+* Listening on http://0.0.0.0:9292
+Use Ctrl-C to stop
+- Gracefully stopping, waiting for requests to finish
+=== puma shutdown: 2024-07-05 19:50:05 +0000 ===
 - Goodbye!
 ```
 
-IMPORTANTE: por algum motivo as alterações dentro do container só tem efeito na primeira vez que o arquivo é Salvo, uma segunda alteração não tem efeito, isso pode ser algo referente ao comportamento da imagem, ou do docker ou do docker-compose, já que nos testes realizados esse container é iniciado e usado por outro container rodando o Odoo, é preciso investigar melhor para entender se isso é algo normal e já esperado ou se teria uma forma de corrigir, porque devido a isso para testar dessa forma está sendo necessário alterar uma vez e se for preciso fazer outra alteração sair do container fazer um kill e inicia-lo novamente.
+**IMPORTANTE:** por algum motivo as alterações dentro do container só tem efeito na primeira vez que o arquivo é Salvo, uma segunda alteração não tem efeito, isso pode ser algo referente ao comportamento da imagem, ou do Docker ou do Docker Compose, já que nos testes realizados esse container é iniciado e usado por outro container rodando o Odoo, é preciso investigar melhor para entender se isso é algo normal e já esperado ou se teria uma forma de corrigir, porque devido a isso para testar dessa forma está sendo necessário alterar uma vez e se for preciso fazer outra alteração sair do container fazer um kill e inicia-lo novamente.

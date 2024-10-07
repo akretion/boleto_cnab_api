@@ -1,5 +1,5 @@
-FROM alpine:3.20.0
-MAINTAINER "raphael.valyi@akretion.com"
+FROM alpine:latest
+LABEL org.opencontainers.image.authors="raphael.valyi@akretion.com"
 
 WORKDIR /usr/src/app
 COPY . .
@@ -28,4 +28,4 @@ RUN bundle config --global frozen 1 && bundle install
 
 EXPOSE 9292
 USER app
-CMD bundle exec puma config.ru
+CMD ["bundle", "exec", "puma", "config.ru"]
