@@ -1,8 +1,8 @@
 GIT
   remote: https://github.com/kivanio/brcobranca.git
-  revision: cd928e87554bcd9eceadea6cf5a9a777f756b1b8
+  revision: a846c103eeefb5d7bc5d7f35c0b493366622425c
   specs:
-    brcobranca (11.0.0)
+    brcobranca (11.1.0)
       fast_blank
       parseline (>= 1.0.3)
       rghost (>= 0.9.8)
