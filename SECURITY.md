@@ -6,11 +6,10 @@ Mantemos ativamente as seguintes versões:
 
 | Versão | Suportada          | Observação |
 | ------ | ------------------ | ---------- |
-| 1.3.x  | ✅ Sim             | Atual (recomendada) |
-| 1.2.x  | ⚠️ Críticas apenas | Migre para 1.3.x |
-| 1.1.x  | ❌ Não             | Descontinuada |
-| 1.0.x  | ❌ Não             | Descontinuada |
-| < 1.0  | ❌ Não             | Descontinuada |
+| 1.5.x  | ✅ Sim             | Atual (recomendada) |
+| 1.4.x  | ⚠️ Críticas apenas | Migre para 1.5.x |
+| 1.3.x  | ⚠️ Críticas apenas | Migre para 1.5.x |
+| < 1.3  | ❌ Não             | Descontinuada |
 
 ## 🐛 Reportando uma Vulnerabilidade
 

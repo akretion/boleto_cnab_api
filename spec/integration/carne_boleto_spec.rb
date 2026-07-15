@@ -46,7 +46,7 @@ RSpec.describe 'Carnê e tema visual (templates Prawn)' do
       base.merge(
         'cor_marca' => '006B3F',
         'marca_dagua' => 'CÓPIA - SEM VALOR FISCAL',
-        'rodape_contato' => 'Imobiliária Lagoa Real • (71) 3333-0000',
+        'rodape_contato' => 'Empresa Lagoa Real • (71) 3333-0000',
         'parcela_atual' => 1,
         'total_parcelas' => 12
       )

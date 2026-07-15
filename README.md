@@ -210,12 +210,12 @@ Os PDFs gerados via Prawn (sem GhostScript) aceitam um **template de carnê** e
 curl "http://localhost:9292/api/boleto?bank=sicoob&type=pdf&template=carne&data=$(python3 -c "
 import json; print(json.dumps({
   'agencia':'4327','conta_corrente':'417270','convenio':'229385','carteira':'1',
-  'nosso_numero':'7890','cedente':'Imobiliária Lagoa Real','documento_cedente':'12345678000100',
+  'nosso_numero':'7890','cedente':'Empresa Lagoa Real','documento_cedente':'12345678000100',
   'sacado':'João da Silva','sacado_documento':'12345678900','valor':2500.0,
   'data_vencimento':'2026/12/31',
   # --- tema visual (opcional) ---
   'cor_marca':'006B3F','marca_dagua':'CÓPIA - SEM VALOR FISCAL',
-  'rodape_contato':'Imobiliária Lagoa Real • (71) 3333-0000',
+  'rodape_contato':'Empresa Lagoa Real • (71) 3333-0000',
   'parcela_atual':1,'total_parcelas':12
 }))")" -o carne.pdf
 
@@ -284,7 +284,7 @@ curl -X POST "http://localhost:9292/api/boleto/multi?type=pdf&template=carne" \
 | Parsing OFX | [docs/api/ofx-parsing.md](./docs/api/ofx-parsing.md) |
 | Troubleshooting | [docs/api/troubleshooting.md](./docs/api/troubleshooting.md) |
 | Arquitetura | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) |
-| Roadmap v1.4 | [docs/ROADMAP.md](./docs/ROADMAP.md) |
+| Roadmap | [docs/ROADMAP.md](./docs/ROADMAP.md) |
 | Cliente Python | [python-client/README.md](./python-client/README.md) |
 | Deploy | [DEPLOY.md](./DEPLOY.md) |
 

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Request
+import hmac
+import os
+
+from fastapi import APIRouter, HTTPException, Request
 
 from app.core.forwarder import forward_event
 from app.core.subscriptions import resolve_callback
@@ -13,9 +16,26 @@ router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 _NORMALIZERS = {"c6": C6Provider, "sicoob": SicoobProvider}
 
 
+def _check_token(banco: str, request: Request) -> None:
+    """Autenticidade do webhook por token de rota (query `?token=` ou header
+    `x-webhook-token`), comparado em tempo constante.
+
+    Os bancos (C6 incluso) não documentam assinatura no payload; o padrão de
+    mercado é embutir um segredo na URL cadastrada no banco. Opt-in por env
+    `WEBHOOK_TOKEN__<BANCO>` — sem a env, aceita (compatível com o comportamento
+    anterior). TODO homologação: trocar por assinatura se o banco oferecer.
+    """
+    expected = os.environ.get(f"WEBHOOK_TOKEN__{banco.upper()}", "")
+    if not expected:
+        return
+    got = request.query_params.get("token") or request.headers.get("x-webhook-token", "")
+    if not hmac.compare_digest(got, expected):
+        raise HTTPException(status_code=401, detail="webhook token inválido")
+
+
 async def _handle(banco: str, request: Request, tenant_id: str | None) -> WebhookEvent:
+    _check_token(banco, request)
     body = await request.json()
-    # TODO: validar autenticidade do webhook do BANCO (assinatura) antes de confiar.
     klass = _NORMALIZERS.get(banco)
     if not klass:
         return WebhookEvent(event="ignorado", raw={"banco": banco})

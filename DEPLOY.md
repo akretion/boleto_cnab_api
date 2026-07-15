@@ -81,7 +81,7 @@ https://boleto-cnab-api.onrender.com
 curl https://boleto-cnab-api.onrender.com/api/health
 
 # Deve retornar:
-{"status":"OK"}
+{"status":"OK","timestamp":"2026-06-17T12:00:00-03:00"}
 ```
 
 ---

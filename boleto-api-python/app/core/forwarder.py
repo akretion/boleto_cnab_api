@@ -1,7 +1,6 @@
 # Push de eventos normalizados para um CONSUMIDOR downstream (qualquer projeto).
 #
-# O Boleto-API é um produto standalone: o consumidor (o Gestão-Contrato é apenas
-# um deles) registra um webhook e recebe o evento normalizado via POST assinado
+# O Boleto-API é um produto standalone: cada sistema consumidor registra um webhook e recebe o evento normalizado via POST assinado
 # (HMAC-SHA256), validável de forma timing-safe (hmac.compare_digest).
 #
 # Esquema de assinatura (o consumidor valida igual):

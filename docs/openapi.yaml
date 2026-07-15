@@ -899,7 +899,7 @@ components:
           properties:
             version:
               type: string
-              example: '12.10.2'
+              example: '12.10.3'
             repository:
               type: string
               example: https://github.com/Maxwbh/brcobranca
@@ -1166,7 +1166,7 @@ components:
           type: string
           description: |
             Tema visual — rodapé com contato da empresa (até 120 chars). Novo em brcobranca v12.10.0.
-          example: 'Imobiliária Lagoa Real • (71) 3333-0000'
+          example: 'Empresa Lagoa Real • (71) 3333-0000'
         fonte_ttf:
           type: string
           description: |

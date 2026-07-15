@@ -1,7 +1,7 @@
 # Guia de Campos para Boletos - BRCobranca
 
 > 📚 Documentação completa dos campos aceitos por cada banco
-> 🕒 Última atualização: 2025-05-20
+> 🕒 Última atualização: 2026-06-17
 
 ## 📋 Índice
 
@@ -48,7 +48,7 @@ Todos os bancos herdam da classe `Brcobranca::Boleto::Base` e compartilham campo
 | `documento_numero` | Número da NF/pedido/contrato | Rastreabilidade e controle interno |
 | `sacado_endereco` | Endereço completo do pagador | Compliance e localização |
 | `data_documento` | Data de emissão | Controle temporal |
-| `instrucao1` a `instrucao7` | Instruções para o caixa/pagador | Comunicação clara |
+| `instrucao1` a `instrucao6` | Instruções para o caixa/pagador | Comunicação clara |
 | `local_pagamento` | Local de pagamento | Informação ao pagador |
 | `cedente_endereco` | Endereço do beneficiário | Contato e compliance |
 
@@ -131,7 +131,7 @@ O tamanho máximo depende do convênio:
   "carteira": "18",
   "nosso_numero": "7",
   "documento_numero": "CTR-2023-0012-017/017",
-  "cedente": "Imobiliária Exemplo LTDA",
+  "cedente": "Empresa Exemplo LTDA",
   "documento_cedente": "12345678000100",
   "sacado": "João da Silva",
   "sacado_documento": "12345678900",
@@ -172,7 +172,7 @@ O tamanho máximo depende do convênio:
 
 - ✅ `documento_numero` - Aceito e recomendado
 - ✅ Todos os campos de endereço
-- ✅ Instruções (instrucao1 a instrucao7)
+- ✅ Instruções (instrucao1 a instrucao6)
 - ✅ Campos de avalista
 
 ### ❌ Erro Comum
@@ -357,6 +357,6 @@ boleto_sicoob = {
 
 ---
 
-**Última atualização:** 2026-04-10
-**Gem:** [maxwbh/brcobranca](https://github.com/Maxwbh/brcobranca) v12.7.1
+**Última atualização:** 2026-06-17
+**Gem:** [maxwbh/brcobranca](https://github.com/Maxwbh/brcobranca) v12.10.3
 **Versão da API:** 1.5.0

@@ -7,8 +7,8 @@ from app.clients import engine
 @respx.mock
 def test_carne_registra_parcelas_e_monta_pdf(client, cobranca_payload, monkeypatch):
     # credenciais do tenant no cofre (pfx vazio -> contexto SSL default)
-    monkeypatch.setenv("VAULT__imob1__c6__client_id", "cid")
-    monkeypatch.setenv("VAULT__imob1__c6__client_secret", "sec")
+    monkeypatch.setenv("VAULT__empresa1__c6__client_id", "cid")
+    monkeypatch.setenv("VAULT__empresa1__c6__client_secret", "sec")
     monkeypatch.setenv("C6_REGISTERED_READY", "true")  # usa o fluxo registrado
     monkeypatch.setattr(engine, "engine_url", lambda: "http://engine.test")
 
@@ -26,7 +26,7 @@ def test_carne_registra_parcelas_e_monta_pdf(client, cobranca_payload, monkeypat
     )
 
     body = {
-        "tenant_id": "imob1",
+        "tenant_id": "empresa1",
         "provider": "c6",
         "account_config": {"agencia": "0001", "conta": "123"},
         "bank": "banco_c6",

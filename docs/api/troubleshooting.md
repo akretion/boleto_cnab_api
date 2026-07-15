@@ -202,7 +202,7 @@ ausente têm o mesmo efeito. Para usar outro valor, basta enviá-lo preenchido.
 
 **Response (400):**
 ```json
-{"error": "Erro ao gerar remessa", "validation_errors": ["Formato '240' não suportado. Use: cnab240, cnab400, cnab444"]}
+{"error": "Erro ao gerar remessa", "validation_errors": ["Formato '240' não suportado. Use: cnab240, cnab400"]}
 ```
 
 **Solução:** Use `cnab240` ou `cnab400` (não apenas `240` ou `400`) no parâmetro `type`.
@@ -228,7 +228,7 @@ Alguns bancos exigem campos específicos:
 
 | Banco | Campo obrigatório |
 |-------|-------------------|
-| Sicoob (CNAB 240) | `convenio`, `modalidade_carteira` (o `variacao` é do boleto e é ignorado na remessa) |
+| Sicoob (CNAB 240) | `convenio`, `modalidade` (o `variacao` é do boleto e é ignorado na remessa) |
 | Banco do Brasil | `convenio` (4-7 dígitos) |
 | Itaú | `carteira` |
 

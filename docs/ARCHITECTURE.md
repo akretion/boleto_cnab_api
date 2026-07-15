@@ -9,7 +9,7 @@ Este documento descreve a arquitetura modular da Boleto CNAB API.
 Este repositório é o **engine de renderização (BrCobrança)** — um dos 3 produtos:
 
 ```
-Consumidores (ex.: Gestão-Contrato) ──► Boleto-API (gateway, Python) ──► ESTE repo (engine, Ruby)
+Sistemas consumidores ──► Boleto-API (gateway, Python) ──► ESTE repo (engine, Ruby)
                                           providers C6/Sicoob, cofre        render boleto/CNAB/OFX/PIX-QR
 ```
 

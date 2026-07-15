@@ -23,7 +23,8 @@ Documentação técnica da Boleto CNAB API — REST API para geração de boleto
 
 | Recurso | Descrição |
 |---------|-----------|
-| [openapi.yaml](./openapi.yaml) | Especificação OpenAPI 3.0 completa |
+| [openapi.yaml](./openapi.yaml) | Especificação OpenAPI 3.0 completa (API Ruby) |
+| [api/gateway-python.md](./api/gateway-python.md) | **Referência do gateway Python** — credenciais/token, cobrança, Pix, conciliação, webhooks |
 | [api/troubleshooting.md](./api/troubleshooting.md) | Solução de problemas comuns |
 | [api/ofx-parsing.md](./api/ofx-parsing.md) | Guia detalhado do endpoint OFX |
 | [api/pix.md](./api/pix.md) | Guia de PIX híbrido em boletos |
@@ -61,7 +62,7 @@ Todos os endpoints de boleto retornam **3 campos** (nunca `nosso_numero_boleto`)
 ## Arquitetura
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — Estrutura modular, services, middleware, fluxos
-- [ROADMAP.md](./ROADMAP.md) — Roadmap de funcionalidades (pendentes e concluídas)
+- [ROADMAP.md](./ROADMAP.md) — Funcionalidades concluídas e comparação com o upstream
 - [development/brcobranca-fork.md](./development/brcobranca-fork.md) — Detalhes da gem brcobranca
 
 ## Guia de Campos por Banco
