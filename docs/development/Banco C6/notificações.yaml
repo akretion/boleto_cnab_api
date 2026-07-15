@@ -1,0 +1,1067 @@
+openapi: 3.1.1
+info:
+  title: Notificações
+  version: 1.0.8
+  description: >-
+    ## O que esta API permite?
+
+    A API de notificações ou também chamada de Webhook, permite que você receba
+    notificações sempre que o status de um objeto criado por você for
+    modificado. As notificações são enviadas via chamadas HTTP para uma URL
+    configurada por você e são iniciadas do nosso lado.
+
+
+    ## Formato das notificações
+
+    Você pode conferir o formato das notificações enviadas nas áreas de
+    'Notificações de Boleto' e 'Notificações de Checkout' nesta mesma
+    documentação. Dentro dessas áreas você pode identificar quais serão os
+    possíveis retornos que você receberá.
+
+
+    Caso deseje utilizar o webhook para notificar o produto de PIX, é necessário
+    que as solicitações sejam feitas por meio da documentação de PIX, já que o
+    fluxo não o mesmo como nas outras APIs. Visite a documentação <a
+    href="https://developers.c6bank.com.br/apis/pix">clicando aqui</a>
+
+
+    <br>
+
+
+    ________________
+
+
+    ## **Resumo Técnico da API**
+
+
+    Tabela com os tipos de notificações por produto:
+
+
+    A tabela abaixo descreve os status a serem retornados baseado em qual
+    produto ele pertence e em qual evento ele vai fazer a notificação.
+
+
+    | Produto     | Service      | Evento                    | Status          |
+
+    |:-----------:|:------------:|:--------------------------|:---------------:|
+
+    | **Boleto**  | BANK_SLIP    | Criado                    | CREATED         |
+
+    |             |              | Alterado                  | CREATED         |
+
+    |             |              | Cancelado (em breve)      | CANCELLED       |
+
+    |             |              | Pago                      | PAID            |
+
+    | **Bolepix**     |BANK_SLIP_PIX | Criado                    |CREATED      |
+
+    |             |              | Pago                      |PAID             |
+
+    ||||
+
+    | **Checkout**| CHECKOUT   | Criado                    | CREATED         |
+
+    |             |            | Expirado                  | EXPIRED         |
+
+    |             |            | Autorizado (em breve)     | AUTHORIZED      |
+
+    |             |            | Negado                    | DECLINED        |
+
+    |             |            | Falha (em breve)          | ERROR           |
+
+    |             |            | Cancelado (em breve)      | CANCELLED       |
+
+    |             |            | Pago                      | PAID            |
+
+    ||||
+
+    | **PIX**     | N/A        | Pago                      | PAID            |
+
+    ||||
+
+    | **PIX Automático** | N/A | Criado                      |
+    CRIADA            |
+
+    | | N/A | Aprovado                    | APROVADA          |
+
+    | | N/A | Cancelado                   | CANCELADA         |
+
+
+    Descrição detalhada de cada coluna da tabela acima:
+
+
+    | Coluna      | Descrição  |
+
+    |:-----------:|:----------:|
+
+    | **Produto** | Representa a API que está sendo utilizada. É o produto para
+    o qual o webhook foi cadastrado. Por exemplo, se o produto for “Boleto”,
+    significa que o webhook está vinculado ao fluxo de boletos dessa API. |
+
+    | **Service** | É o serviço para o qual o usuário deseja receber
+    notificações. O usuário define isso no payload ao registrar um webhook,
+    passando, por exemplo, 'BANK_SLIP' ou 'CHECKOUT'. Para o produto PIX, o
+    processo deve ser validado em sua documentação. |
+
+    | **Evento**  | Representa o momento no qual será disparado a notificação.
+    Por exemplo: quando um link de pagamento expira, quando um boleto ou link de
+    pagamento são pagos. É o “gatilho” que faz o webhook enviar a notificação. |
+
+    | **Status**  | Indica o status que será retornado na notificação,
+    permitindo a visualização e o entendimento de qual evento ocorreu. Por
+    exemplo, quando um boleto ou link de pagamento são pagos, o status no
+    response body será 'PAID'. Quando um link de pagamento expira, o status é
+    'EXPIRED'. |
+
+
+    Operações disponíveis para esta API:
+
+
+    | Operações                                                          |
+
+    |:------------------------------------------------------------------:|
+
+    | [Registrar um webhook](./webhook#tag/api-de-webhook/post/)         |
+
+    | [Consultar um webhook](./webhook#tag/api-de-webhook/get/)          |
+
+    | [Excluir um webhook](./webhook#tag/api-de-webhook/delete/)         |
+
+
+    Retornos de eventos notificados pela API:
+
+
+    | Retornos de eventos da API de:                                    |
+
+    |:-----------------------------------------------------------------:|
+
+    | [Boleto](./webhook#tag/notificações-de-boleto/postboleto)         |
+
+    | [Boleto](./webhook#tag/notificações-de-boleto/getbolepix)         |
+
+    | [Checkout](./webhook#tag/notificações-de-checkout/getcheckout)    |
+
+    | [PIX](./webhook#tag/notificações-de-pix/getpix)                   |
+
+    | [PIX
+    Automático](./webhook#tag/notificações-de-pix/getpix-automatico)        |
+
+
+    Endereço dos ambientes:
+
+
+    | Ambiente | Host                                 | Path          |
+
+    |:--------:|------------------------------------- |---------------|
+
+    | Sandbox  | https://baas-api-sandbox.c6bank.info | /v1/webhooks/ |
+
+    | Produção | https://baas-api.c6bank.info         | /v1/webhooks/ |
+servers:
+  - url: https://baas-api-sandbox.c6bank.info/v1/webhooks
+    description: Ambiente sandbox
+  - url: https://baas-api.c6bank.info/v1/webhooks
+    description: Ambiente produtivo
+paths:
+  /:
+    parameters:
+      - $ref: "#/components/parameters/PartnerSoftwareName"
+      - $ref: "#/components/parameters/PartnerSoftwareVersion"
+      - $ref: "#/components/parameters/Authorization"
+    post:
+      tags:
+        - API de Webhook
+      summary: Registrar um novo webhook para receber notificações
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookRequest"
+      responses:
+        "200":
+          description: Webhook cadastrado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookResponse"
+        4xx:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+        5xx:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+    get:
+      tags:
+        - API de Webhook
+      summary: Consultar um webhook cadastrado
+      parameters:
+        - $ref: "#/components/parameters/Service"
+        - $ref: "#/components/parameters/ContentType"
+        - $ref: "#/components/parameters/Authorization"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookResponse"
+        4xx:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+        5xx:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+    delete:
+      tags:
+        - API de Webhook
+      summary: Excluir um webhook cadastrado
+      parameters:
+        - $ref: "#/components/parameters/Service"
+        - $ref: "#/components/parameters/ContentType"
+        - $ref: "#/components/parameters/Authorization"
+      responses:
+        "204":
+          description: OK
+        4xx:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+        5xx:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+  boleto:
+    post:
+      tags:
+        - Notificações de Boleto
+      summary: Notificações da API de Boleto
+      description: >-
+        Nesta área, apresentamos as possíveis notificações que você poderá
+        receber ao cadastrar um webhook para uso com a API de Boleto.
+
+
+        Caso tenha dúvidas no uso da API para as notificações de Boleto, visite
+        a documentação: <b><a
+        href="https://developers.c6bank.com.br/apis/bankslip">Boleto
+        bancário</a></b>
+
+
+        Notificações exemplificadas:
+
+        - <b>Emissão: </b>
+
+          Enviado quando houver a geração de um boleto.
+
+          Status: CREATED
+
+          Endpoint da API: /v1/bank_slips/
+
+          <br>
+          <hr>
+
+        - <b>Alteração: </b>
+
+          Enviado quando houver alteração de um boleto.
+
+          Status: CREATED
+
+          Endpoint da API: /v1/bank_slips/{id}
+
+          <br>
+          <hr>
+
+        - <b>Pagamento: </b>
+
+          Enviado quando o pagamento de um boleto é feito com sucesso.
+
+          Status: PAID
+
+          Pagamentos não são registrados manualmente (não são notificados após o uso de um endpoint). Eles são processados automaticamente pelo fluxo, que valida o status da transação e envia a notificação correspondente.
+      responses:
+        1. Emissão:
+          description: Notificação enviada na geração de um boleto.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/WebhookNotification"
+                  - type: object
+                    properties:
+                      service:
+                        type: string
+                        examples:
+                          - BANK_SLIP
+                      status:
+                        type: string
+                        description: Status da notificação
+                        examples:
+                          - CREATED
+                      information:
+                        type: string
+                        description: É o objeto atualizado. Este objeto será diferente, conforme o
+                          "service" utilizado.
+                        examples:
+                          - '{"id":"01KB0N9PQAQAABHPCXGKPA1GJA","bar_code":"33693131100000100500000026016720009927768213","digitable_line":"33690.00009   26016.720000   99277.682136   3   13110000010050","our_number":"9927768"}'
+        2. Alteração:
+          description: Notificação enviada quando há alteração de um boleto.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/WebhookNotification"
+                  - type: object
+                    properties:
+                      service:
+                        type: string
+                        examples:
+                          - BANK_SLIP
+                      date_time:
+                        type: string
+                        description: Data e hora de envio da notificação
+                        examples:
+                          - 2025-11-27T20:12:12.089629237Z
+                      status:
+                        type: string
+                        description: Status da notificação
+                        examples:
+                          - CREATED
+                      information:
+                        type: string
+                        description: É o objeto atualizado. Este objeto será diferente, conforme o
+                          "service" utilizado.
+                        examples:
+                          - '"{\"id\":\"01KB3EXEFZRA47PV9HJBFYJYYK\",\"external_reference_id\":\"SCMfL3ewh\",\"amount\":200.00,\"status\":\"CREATED\",\"emission_date\":\"2025-11-27\",\"due_date\":\"2025-12-31\",\"instructions\":[\"1)
+                            Não receber após o vencimento\",\"2) Não receber
+                            após o vencimento\",\"3) Não receber após o
+                            vencimento\",\"4) Não receber após o
+                            vencimento\"],\"internal_id\":\"9928571\",\"digitable_line\":\"33690.00009   26016.720000   99285.712131   5   13110000010050\",\"bar_code\":\"33695131100000100500000026016720009928571213\",\"discount\":{\"discount_type\":\"V\",\"first\":{\"value\":4.15,\"dead_line\":4},\"second\":{\"value\":2.50,\"dead_line\":3},\"third\":{\"value\":3.78,\"dead_line\":2}},\"interest\":{\"type\":\"V\",\"value\":12.35,\"dead_line\":0},\"fine\":{\"type\":\"V\",\"value\":14.25,\"dead_line\":0},\"payer\":{\"name\":\"PAGADOR
+                            DA
+                            SILVA\",\"tax_id\":\"10551349727\",\"email\":\"pagador@email.com.br\",\"address\":{\"street\":\"AV.
+                            NOVE DE
+                            JULHO\",\"number\":123,\"complement\":\"Complemento\",\"city\":\"Cidade\",\"state\":\"SP\",\"zip_code\":\"05093000\"}},\"our_number\":\"9928571\"}"'
+                      expire_at:
+                        type: string
+                        description: Informa a data de expiração da notificação, data em que a
+                          notificação será excluida de nosso banco de dados.
+                          Campo apenas para controle interno. Não impacta sua
+                          funcionalidade. Seu formato é timestamp.
+                        examples:
+                          - "1795810126"
+        3. Cancelamento:
+          description: (Em breve)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    examples:
+                      - Exemplo não mapeado
+        4. Pagamento:
+          description: Notificação enviada quando o pagamento de um boleto é feito com
+            sucesso.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    examples:
+                      - Exemplo não mapeado
+  bolepix:
+    get:
+      tags:
+        - Notificações de Bolepix
+      summary: Notificações da API de Bolepix
+      description: >-
+        Nesta área, apresentamos as possíveis notificações que você poderá
+        receber ao cadastrar um webhook para uso com a API de Bolepix.
+
+
+        Caso tenha dúvidas no uso da API para as notificações de Bolepix, visite
+        a documentação: <b><a
+        href="https://developers.c6bank.com.br/apis/bolepix">Bolepix</a></b>
+
+
+        Notificações exemplificadas:
+
+        - <b>Criado: </b>
+
+          Enviado quando houver a geração de um boleto.
+
+          Status: CREATED
+
+          Endpoint da API: /v1/bank_slips/pix/
+
+          <br>
+          <hr>
+        - <b> Pago: </b>
+
+          Enviado quando o pagamento de um boleto é feito com sucesso.
+
+          Status: PAID
+
+          Pagamentos não são registrados manualmente (não são notificados após o uso de um endpoint). Eles são processados automaticamente pelo fluxo, que valida o status da transação e envia a notificação correspondente.
+      responses:
+        1. Criado:
+          description: Enviado quando houver sucesso a geração de um link de pagamento.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/WebhookNotification"
+                  - type: object
+                    properties:
+                      date_time:
+                        type: string
+                        description: Data e hora de envio da notificação
+                        examples:
+                          - 2026-04-15T20:08:35.152525501Z
+                      status:
+                        type: string
+                        description: Status da notificação
+                        examples:
+                          - CREATED
+                      service:
+                        type: string
+                        examples:
+                          - BANK_SLIP_PIX
+                      information:
+                        type: string
+                        description: É o objeto atualizado. Este objeto será diferente, conforme o
+                          "service" utilizado.
+                        examples:
+                          - '{"amount":109.25,"due_date":"2026-04-30","payment_method":{"bank_slip":{"originator_id":"000006242018","billing_scheme":"21","billing_type":"3","bar_code":"33693143200000109250000062420180010198966213","digitable_line":"33690.00009   62420.180010   01989.662133   3   14320000010925","our_number":"10198966","number":"01KP9CSAE9A8KBKF36BP5M5QKP"},"pix":{"qr_code":"00020101021226990014br.gov.bcb.pix2577qrcode-h.c6pix.com/qrs1/v2/cobv/01hfLwRPfRsyfFQ3Y7cYtmQR13pPymbixEIckLdNZF12k5204000053039865406109.255802BR5916Regressivo
+                            Teste6009Sao
+                            Paulo62070503***63043E74","image_content":"iVBORw0KGgoAAAANSUhEUgAAAfQAAAH0AQAAAADjreInAAADp0lEQVR42u2da2rlMAyFBd7/XmcBAg+5to6OkrS0DAxYnLTc5uEv94+w3qrNfzr+mHjx4sWLFy9evPjf826fY0z//F7X18l1FU/W4TZmuSe+BT/WJx6vs/Xkc9s34etLwIjvwV8S43geojPmlqJ9MyQsVovvxe9Fn8sNL1laJ2vlEN+V35vHDNkxg6rwx1vFN+InZGNi7bYlQoMsNTLmd/pH/Jn8FhP/2c+X9qf4M/k8PMzDuJqpQcKk+M7/FH8iv7yDsCEC3IKyr5dbcf0d2GjE9+CXl7AezZSUEJ1QGvtr4FmKb8MbHIRtR25n0eFWOkQJpoX4JnxEDLa5aAgeWDiQkDCYlTV+KP5kfsJxnMVA3BsJkRaaxsYU34VfEoNtYysHN6vxo9AvIWjiu/CRIhihSJyjB7AwI5AM80F8D97gOmSwGJsEsZRIEt+IT/cQigLKIvWLDc4vi+/ExzYxqH4AuWSyLOA53OPP4k/mnaMFlETGauwc5GuI78KD2YrE0pjMXCH2DX/qH/En81xBEBfxPkSSQ7gyyyy+Cb9vQ4dMEhcUECGRwFlk8R34eEUs2/GEyBbNWxYRTqT4LnwahU7Fo2EukCeZRUTi2/BhHZKvkPljFqxaUya+D5/JI6P8cdaPhP6A8Dziz+LP5al+OPcRuuOIJ5ISEd+Fz6qBwIzkhELKKTviW/EjsgQcK3ajkFFEj/1Ff4g/m8dCM3YUS1Nh6I8aQBLfgkejKKpI71wKk1H7gPgWPFUJZZ+IG5eRjlzF7oT4Fjw5jKV+hFtGkEVAXFl8Ex4RQU9BYTbcSNpWHvpD/Ml8aQ9ACJHqClhzPPOP4s/n68gAtippmgSyjOIb8WUqhKNGcPoo7yad8uJ/ij+Xp5JxyxqCMXOYhJfbz/yx+JN5ejbLKIGoLUKFEXqK7vIn/lw+CkKq5ASau4VTK9kU34cfHBogw5EUiKOGYJCgie/AU5FoGR42S+fgcOojufePiz+YL+3hNCrSSyOJ54S5p/4QfzA/yUFEl9jIjlLsHak/7vFn8SfznEK61YlTW5mNOW8TZcU34amMJKPJ3FLO84Te/E/x5/IpOSVyZGQqlrayZ/+Y+KP5cfvMaRFEkA0x3udPij+Vp7wAzAMKJJMmqQXk4lvxPCcy0wYYLGZkT7zWH4s/mx8laXg7y8qxr+ePiz+Tp7Igt8ERYsyUz2ryt/pD8SfzxX7MSGENIY2SaZ7i2/D6/1nixYsXL168ePH/jf8L7l5zeq9ZmYsAAAAASUVORK5CYII=","mime_type":"image/png","reference":"QRS1TXJ0YVADX5MH56SOJQJXKEOEBMP3B95"}},"id":"01KP9CS9RW5EDMMG30ZVE7AASC","external_reference_id":"KZUJ0GAT7YI4CUOP3NY651STLW"}'
+        2. Pagamento:
+          description: Enviado quando o pagamento de um link de pagamento é pago com
+            sucesso.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/WebhookNotification"
+                  - type: object
+                    properties:
+                      date_time:
+                        type: string
+                        description: Data e hora de envio da notificação
+                        examples:
+                          - 2026-04-15T20:08:35.152525501Z
+                      status:
+                        type: string
+                        description: Status da notificação
+                        examples:
+                          - PAID
+                      service:
+                        type: string
+                        examples:
+                          - BANK_SLIP_PIX
+                      information:
+                        type: string
+                        description: É o objeto atualizado. Este objeto será diferente, conforme o
+                          "service" utilizado.
+                        examples:
+                          - '{"information":"{\"id\":\"01KP9C34NVB711SM0GT5C0CWVT\",\"status\":\"SUCCESS\",\"payment_date\":\"2026-04-15\",\"payment_method\":\"PIX\",\"external_reference_id\":\"P5IMR8UUDN9O8P2LKBN8EUKXCR\",\"amount\":\"109.25\"}"}'
+  checkout:
+    get:
+      tags:
+        - Notificações de Checkout
+      summary: Notificações da API de Checkout​
+      description: >-
+        Nesta área, apresentamos as possíveis notificações que você poderá
+        receber ao cadastrar um webhook para uso com a API de Checkout.
+
+
+        Caso tenha dúvidas no uso da API para as notificações de Checkout,
+        visite a documentação: <b><a
+        href="https://developers.c6bank.com.br/apis/checkout">Checkout</a></b>
+
+
+        Notificações exemplificadas:
+
+        - <b>Criação: </b>
+
+          Enviado quando houver sucesso a geração de um link de pagamento.
+
+          Status: CREATED
+
+          Endpoint da API: /v1/checkouts/
+
+          <br>
+          <hr>
+
+        - <b>Expiração: </b>
+
+          Enviado quando houver a expiração de um link de pagamento.
+
+          Status: EXPIRED
+
+          A expiração pode ser realizada através do endpoint da API de checkout: /v1/checkouts/
+
+          Porém, a expiração de um link também pode ocorrer de forma automática pelo fluxo.
+
+          <br>
+          <hr>
+
+        - <b>Negado: </b>
+
+          Enviado quando o pagamento de um link de pagamento é negado/rejeitado.
+
+          Status: DECLINED
+
+          Rejeições não são registradas manualmente (não são notificadas após o uso de um endpoint). Elas são processadas automaticamente pelo fluxo, que valida o status da transação e envia a notificação correspondente.
+
+          <br>
+          <hr>
+
+        - <b>Pagamento: </b>
+
+          Enviado quando o pagamento de um link de pagamento é pago com sucesso.
+
+          Status: PAID
+
+          Pagamentos não são registrados manualmente (não são notificados após o uso de um endpoint). Eles são processados automaticamente pelo fluxo, que valida o status da transação e envia a notificação correspondente.
+      responses:
+        1. Criação:
+          description: Enviado quando houver sucesso a geração de um link de pagamento.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/WebhookNotification"
+                  - type: object
+                    properties:
+                      service:
+                        type: string
+                        examples:
+                          - CHECKOUT
+                      date_time:
+                        type: string
+                        description: Data e hora de envio da notificação
+                        examples:
+                          - 2025-11-27T20:12:12.089629237Z
+                      status:
+                        type: string
+                        description: Status da notificação
+                        examples:
+                          - CREATED
+                      information:
+                        type: string
+                        description: É o objeto atualizado. Este objeto será diferente, conforme o
+                          "service" utilizado.
+                        examples:
+                          - '{"external_id":"c07bc13a-1b5a-4882-abe8-bc07efa5f167","date_time":"2025-12-18T14:58:51.716648139Z","status":"CREATED","client_id":"913dc8cd-2d75-46ea-abed-51f0dad85c6d","partner_id":"00010","service":"CHECKOUT","information":"{\"id\":\"c07bc13a-1b5a-4882-abe8-bc07efa5f167\",\"url\":\"https://payment.c6pay.com.br/payment/c07bc13a-1b5a-4882-abe8-bc07efa5f167\"}"}'
+        2. Expiração:
+          description: Notificação enviada quando link de pagamento expira.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/WebhookNotification"
+                  - type: object
+                    properties:
+                      service:
+                        type: string
+                        examples:
+                          - CHECKOUT
+                      date_time:
+                        type: string
+                        description: Data e hora de envio da notificação
+                        examples:
+                          - 2025-11-27T20:12:12.089629237Z
+                      status:
+                        type: string
+                        description: Status da notificação
+                        examples:
+                          - EXPIRED
+                      information:
+                        type: string
+                        description: É o objeto atualizado. Este objeto será diferente, conforme o
+                          "service" utilizado.
+                        examples:
+                          - '{"id":"7cab634b-32ca-461d-9c6d-4d596879a14f","status":"EXPIRED","external_reference_id":"A123456789","amount":123.45,"description":"Cobrança
+                            do produto A, para o cliente B, pedido
+                            1234.","redirect_url":"http://www.seusite.com.br/finalizaPedido","intention_date_time":"2025-11-28T17:38:50Z","transaction_time":"null","expiration_date_time":"2025-11-28T17:40:05Z","payer":{},"payment":{"card":{"type":"CREDIT","installments":1,"fixed_installments":true,"authenticate":"NOT_REQUIRED"}}}'
+                      expire_at:
+                        type: string
+                        description: Informa a data de expiração da notificação, data em que a
+                          notificação será excluida de nosso banco de dados.
+                          Campo apenas para controle interno. Não impacta sua
+                          funcionalidade. Seu formato é timestamp.
+                        examples:
+                          - "1795887530"
+        3. Autorização:
+          description: (Em breve)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    examples:
+                      - Exemplo não mapeado
+        4. Negado:
+          description: Notificação enviada quando um link de pagamento é negado.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/WebhookNotification"
+                  - type: object
+                    properties:
+                      service:
+                        type: string
+                        examples:
+                          - CHECKOUT
+                      date_time:
+                        type: string
+                        description: Data e hora de envio da notificação
+                        examples:
+                          - 2025-11-27T20:12:12.089629237Z
+                      status:
+                        type: string
+                        description: Status da notificação
+                        examples:
+                          - DECLINED
+                      information:
+                        type: string
+                        description: É o objeto atualizado. Este objeto será diferente, conforme o
+                          "service" utilizado.
+                        examples:
+                          - '{"id":"3c2edaab-1363-47d2-bfa1-7d1d51114d6c","status":"DECLINED","transaction_type":"CREDIT","external_reference_id":"A123456789","amount":98.45,"description":"Cobrança
+                            do produto A, para o cliente B, pedido
+                            1234.","intention_date_time":"null","transaction_time":"null","expiration_date_time":"null","payer":{"name":"José
+                            da
+                            Silva","tax_id":"51448724000133","email":"pagador@email.com.br","address":{"street":"Av.
+                            Nove de Julho","number":"123","city":"Rio de
+                            Janeiro","state":"RJ","zip_code":"05093000"}},"payment":{"card":{"type":"CREDIT","installments":1,"fixed_installments":true,"authenticate":"NOT_REQUIRED","return_code":"78","message":"Blocked
+                            Card","token":"fd912f12-52ab-4228-b742-63875a8db031125562"}}}'
+                      expire_at:
+                        type: string
+                        description: Informa a data de expiração da notificação, data em que a
+                          notificação será excluida de nosso banco de dados.
+                          Campo apenas para controle interno. Não impacta sua
+                          funcionalidade. Seu formato é timestamp.
+                        examples:
+                          - "1795810126"
+        5. Falha:
+          description: (Em breve)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    examples:
+                      - Exemplo não mapeado
+        6. Cancelamento:
+          description: (Em breve)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    examples:
+                      - Exemplo não mapeado
+        7. Pagamento:
+          description: Notificação enviada quando um link de pagamento é pago com sucesso.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/WebhookNotification"
+                  - type: object
+                    properties:
+                      service:
+                        type: string
+                        examples:
+                          - CHECKOUT
+                      date_time:
+                        type: string
+                        description: Data e hora de envio da notificação
+                        examples:
+                          - 2025-11-27T20:12:12.089629237Z
+                      status:
+                        type: string
+                        description: Status da notificação
+                        examples:
+                          - PAID
+                      information:
+                        type: string
+                        description: É o objeto atualizado. Este objeto será diferente, conforme o
+                          "service" utilizado.
+                        examples:
+                          - '{"id":"cce1123a-a1ea-48f5-b95f-9821b95d36dd","status":"PAID","transaction_type":"CREDIT","external_reference_id":"A123456789","amount":98.45,"description":"Cobrança
+                            do produto A, para o cliente B, pedido
+                            1234.","intention_date_time":"null","transaction_time":"null","expiration_date_time":"null","payer":{"name":"José
+                            da
+                            Silva","tax_id":"51448724000133","email":"pagador@email.com.br","address":{"street":"Av.
+                            Nove de Julho","number":"123","city":"Rio de
+                            Janeiro","state":"RJ","zip_code":"05093000"}},"payment":{"card":{"type":"CREDIT","installments":1,"fixed_installments":true,"authenticate":"NOT_REQUIRED","token":"da01d6da-fb5f-4a9a-85a0-a6629f5de603125562"}},"fraud_analysis":{"analyzed":true,"recommendation":"APPROVE"}}'
+                      expire_at:
+                        type: string
+                        description: Informa a data de expiração da notificação, data em que a
+                          notificação será excluida de nosso banco de dados.
+                          Campo apenas para controle interno. Não impacta sua
+                          funcionalidade. Seu formato é timestamp.
+                        examples:
+                          - "1795810126"
+  pix:
+    get:
+      tags:
+        - Notificações de PIX
+      summary: Notificações da API de PIX
+      description: >-
+        ### Importante
+
+
+        Para utilizar webhooks para notificações de PIX, é necessário seguir o
+        fluxo e os endpoints descritos na documentação da API de PIX.
+
+
+        Esta documentação apresenta apenas os callbacks recebidos, não o
+        processo de configuração e envio dessas notificações.
+
+
+        Para detalhes sobre como configurar webhooks e receber notificações de
+        PIX, acesse a documentação <b><a
+        href="https://developers.c6bank.com.br/apis/pix">clicando aqui</a></b>
+
+
+        <br>
+
+        <hr>
+
+
+        Se você já fez a configuração do seu sistema para receber notificações
+        de PIX.
+
+        Nesta área, apresentamos as possíveis notificações que você poderá
+        receber ao cadastrar um webhook no serviço.
+
+
+        Notificações exemplificadas:
+
+        - <b>Pagamento: </b>
+
+          Enviado quando o pagamento de um PIX é feito com sucesso.
+
+          Status: PAID
+
+          Pagamentos não são registrados manualmente (não são notificados após o uso de um endpoint). Eles são processados automaticamente pelo fluxo, que valida o status da transação e envia a notificação correspondente.
+      responses:
+        1. Pagamento:
+          description: Notificação enviada quando um PIX é pago com sucesso.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      $ref: "#/components/schemas/WebhookNotificationPix"
+  pix-automatico:
+    get:
+      tags:
+        - Notificações de PIX
+      summary: Notificações da API de PIX Automático
+      description: >-
+        ### Importante
+
+
+        Para utilizar webhooks para notificações de PIX Automático, é necessário
+        seguir o fluxo e os endpoints descritos na documentação da API de PIX.
+
+
+        Esta documentação apresenta apenas os callbacks recebidos, não o
+        processo de configuração e envio dessas notificações.
+
+
+        Para detalhes sobre como configurar webhooks e receber notificações de
+        PIX Automático, acesse a documentação <b><a
+        href="https://developers.c6bank.com.br/apis/pix-automatico">clicando
+        aqui</a></b>
+
+
+        <br>
+
+        <hr>
+
+
+        Se você já fez a configuração do seu sistema para receber notificações
+        de PIX Automático.
+
+        Ao lado, apresentamos as possíveis notificações que você poderá receber
+        ao cadastrar um webhook no serviço.
+
+
+        Notificações de <b>recorrência</b> exemplificadas:
+
+        - <b>1. Criada: </b>
+
+          Enviado quando um PIX Automático é criado com sucesso.
+
+          Status: CRIADA
+        - <b>2. Aprovada: </b>
+
+          Enviado quando um PIX Automático é aprovado.
+
+          Status: APROVADA
+        - <b>3. Cancelada: </b>
+
+          Enviado quando um PIX Automático é cancelado.
+
+          Status: CANCELADA
+
+        <hr>
+
+
+        Notificações de <b>cobrança recorrente</b> exemplificadas:
+
+        - <b>4. Criada: </b>
+
+          Enviado quando um PIX Automático é criado com sucesso.
+
+          Status: CRIADA
+      responses:
+        1. Criada:
+          description: Notificação enviada quando um PIX Automático é criado com sucesso.
+            (Recorrência)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      Criada:
+                        description: Notificação enviada quando um PIX Automático é criado com sucesso.
+                        examples:
+                          - |
+                            {[{"idRec":"RR3187249520260428NOhZsHwdJUv","status":"CRIADA","atualizacao":[{"status":"CRIADA","data":"2026-04-28T17:36:40.090Z"}],"encerramento":null,"ativacao":{"tipoJornada":"AGUARDANDO_DEFINICAO","dadosJornada":null}}]}
+        2. Aprovada:
+          description: Notificação enviada quando um PIX Automático é aprovado.
+            (Recorrência)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      Aprovada:
+                        description: Notificação enviada quando um PIX Automático é aprovado.
+                        examples:
+                          - |
+                            {[{"idRec":"RR3187249520260428NOhZsHwdJUv","status":"APROVADA","atualizacao":[{"status":"CRIADA","data":"2026-04-28T17:36:40.090Z"},{"status":"APROVADA","data":"2026-04-28T18:07:19.492Z"}],"encerramento":null,"ativacao":{"tipoJornada":"JORNADA_2","dadosJornada":null}}]}
+        3. Cancelada:
+          description: Notificação enviada quando um PIX Automático é cancelado.
+            (Recorrência)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      Cancelada:
+                        description: Notificação enviada quando um PIX Automático é cancelado.
+                        examples:
+                          - |
+                            {[{"idRec":"RR3187249520260428NOhZsHwdJUv","status":"CANCELADA","atualizacao":[{"status":"CRIADA","data":"2026-04-28T17:36:40.090Z"},{"status":"APROVADA","data":"2026-04-28T18:07:19.492Z"},{"status":"CANCELADA","data":"2026-04-28T18:16:30.143Z"}],"encerramento":{"solicitante":"PSP_PAGADOR","codigo":"SLDB","descricao":"Cancelamento solicitado pelo usuário pagador"},"ativacao":{"tipoJornada":"JORNADA_2","dadosJornada":null}}]}
+        4. Criada:
+          description: Notificação enviada quando um PIX Automático é criado com sucesso.
+            (Cobrança recorrente)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      Criada:
+                        description: Notificação enviada quando um PIX Automático é criado com sucesso.
+                        examples:
+                          - |
+                            {[{"idRec":"RR3187249520260506L5O1cJ375iC","txid":"31872495Tx0ngVlMTsJ6SQpF41Ls9x8QrGc","status":"ATIVA","atualizacao":[{"status":"CRIADA","data":"2026-05-06T17:33:42.608Z"},{"status":"ATIVA","data":"2026-05-06T17:33:46.691Z"}],"tentativas":[{"dataLiquidacao":"2026-05-15","tipo":"AGND","status":"SCHEDULED","endToEndId":"E31872495202605151500flVwy5Mc4Z9"}]}]}
+components:
+  parameters:
+    ContentType:
+      in: header
+      name: Content-Type
+      description: Tipo do conteúdo da requisição
+      schema:
+        type: string
+      required: true
+      examples:
+        default:
+          value: application/x-www-form-urlencoded
+    PartnerSoftwareName:
+      in: header
+      name: partner-software-name
+      description: Nome do software do parceiro
+      schema:
+        type: string
+      required: false
+      examples:
+        default:
+          value: Super PDV
+    PartnerSoftwareVersion:
+      in: header
+      name: partner-software-version
+      description: Versão do software do parceiro
+      schema:
+        type: string
+      required: false
+      examples:
+        default:
+          value: 1.0.0
+    Service:
+      in: query
+      name: service
+      description: Nome do serviço
+      schema:
+        type: string
+        enum:
+          - BANK_SLIP
+          - CHECKOUT
+      required: true
+      examples:
+        default:
+          value: BANK_SLIP
+  schemas:
+    ClientId:
+      type: string
+      description: Client Id vinculado ao webhook.
+      readOnly: true
+      examples:
+        - 6abeb8cd-3dda-4f3a-b038-3b55c9d87d6a
+    CreatedAt:
+      type: string
+      description: Data e hora de envio da notificação
+      readOnly: true
+      examples:
+        - 2025-11-26T18:02:23.301232079Z
+    Service:
+      type: string
+      description: >-
+        É o serviço para qual você deseja receber notificações. As notificações
+        são enviadas somente para a mesma chave de integração que gera o objeto
+        a ser notificado.
+
+
+        Por exemplo: Digamos que se você tinha duas credenciais de integração
+        (client_id A e client_id B) e cadastre um webhook para cada uma delas,
+        usando URLs diferentes.
+
+        Ao gerar um boleto usando o client_id A, a notificação de pagamento
+        deste boleto será enviada para a URL cadastrada pelo mesmo client_id.
+
+        Ao mesmo tempo, boletos cadastrados pelo client_id B serão somente
+        notificados a webhook criado por essa mesma chave.
+
+
+        Isso é particularmente importante caso você faça uso de um mesmo produto
+        (boleto, por exemplo) através de dois sistemas distintos.
+      enum:
+        - BANK_SLIP
+        - BANK_SLIP_PIX
+        - CHECKOUT
+      examples:
+        - BANK_SLIP
+    URL:
+      type: string
+      description: URL na qual você deseja receber a chamada de webhook. Um ponto de
+        atenção importante é que somente são aceitas URLs seguras (https).
+      examples:
+        - https://www.meuendereco.com.br/webhook/xpto
+    WebhookRequest:
+      type: object
+      required:
+        - url
+        - service
+      properties:
+        url:
+          $ref: "#/components/schemas/URL"
+        service:
+          $ref: "#/components/schemas/Service"
+    WebhookResponse:
+      type: object
+      properties:
+        service:
+          $ref: "#/components/schemas/Service"
+        client_id:
+          $ref: "#/components/schemas/ClientId"
+        url:
+          $ref: "#/components/schemas/URL"
+        created_at:
+          $ref: "#/components/schemas/CreatedAt"
+    WebhookNotification:
+      type: object
+      properties:
+        external_id:
+          type: string
+          description: É o id do objeto que está sendo notificado.
+          examples:
+            - 19BE50723DAA4B0C91789457DC
+        date_time:
+          type: string
+          description: Data e hora de envio da notificação
+          examples:
+            - 2025-11-26T18:02:36.261549917Z
+        client_id:
+          $ref: "#/components/schemas/ClientId"
+        partner_id:
+          type: string
+          description: É o identificador do parceiro associado a esta notificação
+          examples:
+            - 01J6W5RJTVB5CV1Z8QAB1K08QG
+        service:
+          $ref: "#/components/schemas/Service"
+    WebhookNotificationPix:
+      date_time:
+        type: string
+        description: Data e hora de envio da notificação
+        examples:
+          - 2025-12-01T16:43:54.192482677Z
+      status:
+        type: string
+        description: Status da notificação
+        examples:
+          - PAID
+      service:
+        $ref: "#/components/schemas/Service"
+        enum:
+          - PIX
+        examples:
+          - PIX
+      key:
+        type: string
+        description: Chave PIX utilizada na transação
+        examples:
+          - 23e454c1-c65b-4b28-9348-e4dd026aa27b
+      tax_id:
+        type: string
+        description: Identificador único da transação
+        examples:
+          - "99367503000167"
+      information:
+        type: string
+        description: É o objeto atualizado. Este objeto será diferente, conforme o
+          "service" utilizado.
+        examples:
+          - |
+            {"pix":[{"endToEndId":"E31872495202512011643tabwNhezy94","valor":"100.00","chave":"23e454c1-c65b-4b28-9348-e4dd026aa27b","horario":"2025-12-01T19:43:48.944Z"}]}
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

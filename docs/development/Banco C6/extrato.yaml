@@ -1,0 +1,208 @@
+openapi: 3.1.1
+info:
+  title: Extrato
+  version: 1.0.0
+  description: |-
+    ## O que esta API permite?
+    Esta API permite consultar o extrato de uma conta, fornecendo informações detalhadas sobre lançamentos, valores, datas, tipos de operação e transação, além de dados adicionais. Facilitando o acesso aos dados financeiros do cliente de forma segura e estruturada.
+
+    <br>
+
+    ________________
+
+    ## **Resumo Técnico da API**
+
+    Esta API possui apenas uma operação disponível.
+
+    | Operação                                                                   |
+    |:--------------------------------------------------------------------------:|
+    | [Consultar extrato](statement#tag/api-de-extrato/get/)                          |
+
+    Endereço dos ambientes:
+
+    | Ambiente | Host                                 | Path                 |
+    |:--------:|------------------------------------- |----------------------|
+    | Sandbox  | https://baas-api-sandbox.c6bank.info | /v1/statement/       |
+    | Produção | https://baas-api.c6bank.info         | /v1/statement/       |
+
+    **Observações**
+
+    O intervalo entre <code>start_date</code> e <code>end_date</code> não pode exceder 30 dias. A API não impõe restrições de retenção ou limite de tempo sobre os dados consultados, sendo o limite aplicado exclusivamente à duração do período informado, independentemente das datas consultadas.
+
+    Esta API é destinada exclusivamente à consulta de extratos e não disponibiliza a funcionalidade de consulta de saldo.
+
+    O uso desta API é exclusivo para clientes do segmento Pessoa Jurídica (PJ).
+servers:
+  - url: https://baas-api-sandbox.c6bank.info/v1/statement
+    description: Ambiente sandbox
+  - url: https://baas-api.c6bank.info/v1/statement
+    description: Ambiente produtivo
+paths:
+  /:
+    get:
+      tags:
+        - API de Extrato
+      summary: Consultar extrato
+      description: Consulta o extrato de uma conta dentro de um período específico,
+        retornando detalhes.
+      parameters:
+        - name: start_date
+          in: query
+          description: Data inicial do período de consulta do extrato. Define o início do
+            intervalo de datas para os lançamentos retornados. O intervalo entre
+            start_date e end_date não pode exceder 30 dias.
+          required: true
+          schema:
+            type: string
+            format: date
+            pattern: ^\d{4}-\d{2}-\d{2}$
+            examples:
+              - 2025-10-10
+        - name: end_date
+          in: query
+          description: Data final do período do extrato. Define o limite final do
+            intervalo de datas para os registros retornados. O intervalo entre
+            start_date e end_date não pode exceder 30 dias.
+          required: true
+          schema:
+            type: string
+            format: date
+            pattern: ^\d{4}-\d{2}-\d{2}$
+            examples:
+              - 2025-11-10
+        - $ref: "#/components/parameters/Authorization"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatementResponse"
+        4xx:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+        5xx:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+components:
+  parameters:
+    Authorization:
+      in: header
+      name: Authorization
+      description: Token de acesso para autenticação. Deve ser enviado no formato
+        "Bearer {{your_access_token}}".
+      schema:
+        type: string
+      required: true
+      examples:
+        default:
+          value: Bearer {{your_access_token}}
+  schemas:
+    Entries:
+      type: object
+      properties:
+        local_reference:
+          type: string
+          description: Referencia local do registro
+        created_at:
+          type: string
+          format: date-time
+          pattern: ^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$
+          description: Data de criação no formato (YYYY-MM-DDTHH:MM:SS)
+          examples:
+            - 2025-12-05T14:30:00
+        entry_date:
+          type: string
+          format: date
+          pattern: ^\d{4}-\d{2}-\d{2}$
+          description: Data de lançamento no formato (YYYY-MM-DD)
+          examples:
+            - 2025-12-05
+        amount:
+          type: string
+          description: Valor financeiro referente ao lançamento.
+          examples:
+            - "1500.00"
+        title:
+          type: string
+          description: Resumo breve e identificador da movimentação registrada no extrato.
+          examples:
+            - Pix Recebido C6 QR Code de Regressivo
+        description:
+          type: string
+          description: Descrição detalhada do lançamento.
+          examples:
+            - Pix QR Code para pagamento de Supermercado XYZ
+        reference:
+          type: string
+          description: Identificador/Referência associada ao lançamento.
+          examples:
+            - 019aeec0-a61a-8043-4a46-2f191aebdf9a
+        operation_type:
+          type: string
+          enum:
+            - OUTGOING
+            - INCOMING
+          description: Tipo de operação financeira, indicando se o lançamento representa
+            saída (OUTGOING) ou entrada (INCOMING) de recursos.
+          examples:
+            - INCOMING
+        transaction_type:
+          type: string
+          enum:
+            - PAYMENT
+            - TRANSFER
+            - PAYMENT_REVERSAL
+            - PERSONAL_LOAN
+            - INSTALLMENT_LOAN
+            - PARKY
+            - TAGGY
+            - C6_TAG_PASSAGE
+            - C6_TAG_STAY
+            - DIRECT_DEBIT_AGREEMENT
+            - SPREAD_OP_OF_EXCHANGE
+            - IOF_OP_OF_EXCHANGE
+            - GLOBAL_ACCOUNT
+            - FUND
+            - RECHARGE
+            - KICK
+            - PREPAYMENT
+            - CREDIT_CARD_SALE
+            - DEBIT_CARD_SALE
+            - OVERFLOW
+            - CREDIT_PIX_DEVOLUTION_RECEIVED
+            - DEBIT_PIX_DEVOLUTION_SENT
+            - CREDIT_QRCODE_PIX_PAYMENT_RECEIVED
+            - CREDIT_PIX_PAYMENT_RECEIVED
+            - DEBIT_PIX_PAYMENT_REALIZED
+            - DEBIT_OPEN_BANKING_PIX_REALIZED
+            - VEHICLE_TAX
+            - TECH_INVEST
+            - OTHER
+          description: Tipo de transação
+          examples:
+            - CREDIT_QRCODE_PIX_PAYMENT_RECEIVED
+      required:
+        - external_id
+        - created_at
+        - entry_date
+        - amount
+        - title
+        - description
+        - operation_type
+        - transaction_type
+    StatementResponse:
+      type: object
+      properties:
+        entries:
+          type: array
+          description: Lista de entradas
+          items:
+            $ref: "#/components/schemas/Entries"
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

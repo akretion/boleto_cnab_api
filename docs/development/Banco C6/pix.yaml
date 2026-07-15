@@ -1,0 +1,4609 @@
+openapi: 3.1.1
+info:
+  title: PIX
+  version: 3.0.1
+  description: >-
+    ## **O que esta API permite?**
+
+
+    A API de Pix permite que empresas integrem facilmente funcionalidades de
+    pagamento instantâneo diretamente em suas plataformas.
+
+    Com ela, é possível criar cobranças, consultar transações, realizar
+    devoluções e receber pagamentos via QR Code ou chaves Pix,
+
+    de forma segura e padronizada.
+
+
+    <br>
+
+
+    ________________
+
+
+    ## **Resumo Técnico da API**
+
+
+    Endereço dos ambientes:
+
+
+    | Ambiente | Host                                 | Path                 |
+
+    |:--------:|------------------------------------- |----------------------|
+
+    | Sandbox  | https://baas-api-sandbox.c6bank.info | /v2/pix/             |
+
+    | Produção | https://baas-api.c6bank.info         | /v2/pix/             |
+servers:
+  - url: https://baas-api.c6bank.info/v2/pix
+    description: Servidor de produção
+  - url: https://baas-api-sandbox.c6bank.info/v2/pix
+    description: Servidor de sandbox
+tags:
+  - name: Cob
+    x-displayName: Cobrança imediata
+    description: Endpoints para criar e gerenciar cobranças com pagamento instantâneo.
+  - name: CobV
+    x-displayName: Cobrança com vencimento
+    description: Endpoints para criar e gerenciar cobranças com data de vencimento.
+  - name: CobPayload
+    x-displayName: Obter cobrança por URL
+    description: Endpoints para acessar cobranças via URLs seguras com autenticação.
+  - name: LoteCobV
+    x-displayName: Cobrança em lote
+    description: Endpoints para criar e gerenciar várias cobranças com vencimento de
+      uma vez.
+  - name: PayloadLocation
+    x-displayName: Gerenciar URLs de cobrança
+    description: Endpoints para configurar e remover URLs seguras de cobrança (locations).
+  - name: Pix
+    x-displayName: Pix recebidos
+    description: Endpoints para consultar e gerenciar Pix recebidos.
+  - name: Webhook
+    x-displayName: Notificações (Webhook)
+    description: >-
+      Endpoints para configurar notificações automáticas sobre eventos Pix.
+
+
+      Para validar os possíveis resultados, consulte a documentação de
+      [Webhooks](https://developers.c6bank.com.br/apis/webhook) e acesse a seção
+      Notificações de PIX. Lá estão descritos os tipos de respostas que o
+      webhook pode retornar.
+paths:
+  /cob/{txid}:
+    parameters:
+      - name: txid
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/txid"
+        examples:
+          default:
+            value: "{txid}"
+      - $ref: "#/components/parameters/Authorization"
+    put:
+      tags:
+        - Cob
+      summary: Criar cobrança imediata
+      security:
+        - OAuth2:
+            - cob.write
+      requestBody:
+        $ref: "#/components/requestBodies/CobBody"
+      responses:
+        "201":
+          description: Cobrança imediata criada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CobGerada"
+              examples:
+                retorno1:
+                  $ref: "#/components/examples/cobResponse1"
+                retorno2:
+                  $ref: "#/components/examples/cobResponse5"
+                retorno3:
+                  $ref: "#/components/examples/cobResponse6"
+                retorno4:
+                  $ref: "#/components/examples/cobResponse7"
+        "400":
+          description: Requisição com formato inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
+              examples:
+                exemplo1:
+                  $ref: "#/components/examples/RequisicaoInvalidaCobExample1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+    patch:
+      tags:
+        - Cob
+      summary: Revisar cobrança imediata
+      security:
+        - OAuth2:
+            - cob.write
+      requestBody:
+        $ref: "#/components/requestBodies/CobBodyRevisada"
+      responses:
+        "200":
+          description: Cobrança imediata revisada. A revisão deve ser incrementada em 1.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CobGerada"
+              examples:
+                retorno1:
+                  $ref: "#/components/examples/cobResponse3"
+        "400":
+          description: Requisição com formato inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
+              examples:
+                exemplo1:
+                  $ref: "#/components/examples/OperacaoInvalidaCobExample1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+    get:
+      schema:
+        - $ref: "#/components/parameters/Authorization"
+      tags:
+        - Cob
+      summary: Consultar cobrança imediata
+      security:
+        - OAuth2:
+            - cob.read
+      description: Endpoint para consultar uma cobrança através de um determinado txid.
+      responses:
+        "200":
+          description: Dados da cobrança imediata.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CobCompleta"
+              examples:
+                retorno1:
+                  $ref: "#/components/examples/cobResponse1"
+                retorno2:
+                  $ref: "#/components/examples/cobResponse2"
+                retorno3:
+                  $ref: "#/components/examples/cobResponse5"
+                retorno4:
+                  $ref: "#/components/examples/cobResponse6"
+                retorno5:
+                  $ref: "#/components/examples/cobResponse7"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+  /cob:
+    post:
+      tags:
+        - Cob
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+      summary: Criar cobrança imediata sem txid
+      security:
+        - OAuth2:
+            - cob.write
+      description: Endpoint para criar uma cobrança imediata sem informar txid.
+      requestBody:
+        $ref: "#/components/requestBodies/CobBody"
+      responses:
+        "201":
+          description: Cobrança imediata criada
+          content:
+            application/json:
+              schema:
+                - $ref: "#/components/schemas/CobGerada"
+              examples:
+                retorno1:
+                  $ref: "#/components/examples/cobResponse1"
+                retorno2:
+                  $ref: "#/components/examples/cobResponse5"
+                retorno3:
+                  $ref: "#/components/examples/cobResponse6"
+                retorno4:
+                  $ref: "#/components/examples/cobResponse7"
+        "400":
+          description: Requisição com formato inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
+              examples:
+                exemplo1:
+                  $ref: "#/components/examples/RequisicaoInvalidaCobExample1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+    get:
+      parameters:
+        - in: query
+          name: inicio
+          required: true
+          schema:
+            $ref: "#/components/schemas/Inicio"
+        - in: query
+          name: fim
+          required: true
+          schema:
+            $ref: "#/components/schemas/Fim"
+        - name: cpf
+          in: query
+          schema:
+            type: string
+            title: CPF
+            pattern: /^\d{11}$/
+            description: Filtro pelo CPF do devedor. Não pode ser utilizado ao mesmo tempo
+              que o CNPJ.
+        - name: cnpj
+          in: query
+          schema:
+            type: string
+            title: CNPJ
+            pattern: /^\d{14}$/
+            description: Filtro pelo CNPJ do devedor. Não pode ser utilizado ao mesmo tempo
+              que o CPF.
+        - name: locationPresente
+          in: query
+          schema:
+            type: boolean
+        - name: status
+          in: query
+          schema:
+            type: string
+            title: Status do registro da cobrança
+            description: Filtro pelo status da cobrança.
+        - $ref: "#/components/parameters/paginaAtual"
+        - $ref: "#/components/parameters/itensPorPagina"
+        - $ref: "#/components/parameters/Authorization"
+      tags:
+        - Cob
+      summary: Consultar lista de cobranças imediatas
+      security:
+        - OAuth2:
+            - cob.read
+      description: Endpoint para consultar cobranças imediatas através de parâmetros
+        como início, fim, cpf, cnpj e status.
+      responses:
+        "200":
+          description: Lista de cobranças imediatas.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CobsConsultadas"
+              examples:
+                getCobs1:
+                  $ref: "#/components/examples/getCobs1"
+                getCobs2:
+                  $ref: "#/components/examples/getCobs2"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+  /cobv/{txid}:
+    parameters:
+      - name: txid
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/txid"
+        examples:
+          default:
+            value: "{txid}"
+      - $ref: "#/components/parameters/Authorization"
+    put:
+      tags:
+        - CobV
+      summary: Criar cobrança com vencimento
+      security:
+        - OAuth2:
+            - cobv.write
+      description: Endpoint para criar uma cobrança com vencimento.
+      requestBody:
+        required: true
+        description: Dados para geração da cobrança com vencimento.
+        examples:
+          exemplo1:
+            $ref: "#/components/examples/cobBody1"
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - valor
+                - chave
+                - devedor
+                - calendario
+              properties:
+                calendario:
+                  type: object
+                  title: Calendário
+                  description: Os campos aninhados sob o identificador calendário organizam
+                    informações a respeito de controle de tempo da cobrança.
+                  required:
+                    - dataDeVencimento
+                  properties:
+                    dataDeVencimento:
+                      type: string
+                      format: date
+                      description: Data de vencimento da cobrança, no formato `YYYY-MM-DD`.
+                      examples:
+                        - 2025-06-30
+                    validadeAposVencimento:
+                      type: integer
+                      format: int32
+                      description: >
+                        Define quantos dias corridos após a data de vencimento
+                        uma cobrança ainda pode ser paga. Se a data de
+                        vencimento cair em um fim de semana ou feriado, ela deve
+                        ser prorrogada automaticamente.
+                      default: 30
+                devedor:
+                  type: object
+                  required:
+                    - nome
+                    - cpf
+                    - logradouro
+                    - cidade
+                    - uf
+                    - cep
+                  properties:
+                    nome:
+                      type: string
+                      examples:
+                        - Francisco da Silva
+                    cpf:
+                      type: string
+                      examples:
+                        - 12345678909
+                    logradouro:
+                      type: string
+                      examples:
+                        - Alameda Souza, Numero 80, Bairro Braz
+                    cidade:
+                      type: string
+                      examples:
+                        - Recife
+                    uf:
+                      type: string
+                      examples:
+                        - PE
+                    cep:
+                      type: string
+                      examples:
+                        - 70011750
+                valor:
+                  type: object
+                  required:
+                    - original
+                  properties:
+                    original:
+                      type: string
+                      examples:
+                        - "251.00"
+                    multa:
+                      type: object
+                      properties:
+                        modalidade:
+                          type: integer
+                          examples:
+                            - 2
+                        valorPerc:
+                          type: string
+                          examples:
+                            - "15.00"
+                    juros:
+                      type: object
+                      properties:
+                        modalidade:
+                          type: integer
+                          examples:
+                            - 2
+                        valorPerc:
+                          type: string
+                          examples:
+                            - "2.00"
+                    desconto:
+                      type: object
+                      properties:
+                        modalidade:
+                          type: integer
+                          examples:
+                            - 1
+                        descontoDataFixa:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              data:
+                                type: string
+                                format: date
+                                examples:
+                                  - 2024-11-30
+                              valorPerc:
+                                type: string
+                                examples:
+                                  - "30.00"
+                chave:
+                  type: string
+                  description: >-
+                    Chave Pix registrada no DICT.
+
+                    Os tipos de chave podem ser: telefone, e-mail, cpf/cnpj ou
+                    EVP.
+                  examples:
+                    - 100bc602-e559-4d7e-9877-f59a0975dc7f
+                solicitacaoPagador:
+                  type: string
+                  examples:
+                    - Cobrança dos serviços prestados.
+      responses:
+        "201":
+          description: Cobrança com vencimento criada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CobVGerada"
+              examples:
+                retorno1:
+                  $ref: "#/components/examples/cobResponse4"
+        "400":
+          description: Requisição com formato inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
+              examples:
+                exemplo1:
+                  $ref: "#/components/examples/RequisicaoInvalidaCobVExample1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+    patch:
+      tags:
+        - CobV
+      summary: Revisar cobrança com vencimento
+      security:
+        - OAuth2:
+            - cobv.write
+      requestBody:
+        $ref: "#/components/requestBodies/CobVBodyRevisada"
+      responses:
+        "200":
+          description: Cobrança com vencimento revisada. A revisão deve ser incrementada
+            em 1.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CobVGerada"
+              examples:
+                retorno1:
+                  $ref: "#/components/examples/cobResponse4"
+        "400":
+          description: Requisição com formato inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
+              examples:
+                exemplo1:
+                  $ref: "#/components/examples/OperacaoInvalidaCobVExample1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+    get:
+      parameters:
+        - name: revisao
+          in: query
+          required: false
+          schema:
+            - $ref: "#/components/schemas/revisao"
+            - $ref: "#/components/parameters/Authorization"
+      tags:
+        - CobV
+      summary: Consultar cobrança com vencimento
+      security:
+        - OAuth2:
+            - cobv.read
+      description: Endpoint para consultar uma cobrança com vencimento através de um
+        determinado txid.
+      responses:
+        "200":
+          description: Dados da cobrança com vencimento.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CobVCompleta"
+              examples:
+                retorno1:
+                  $ref: "#/components/examples/cobResponse4"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+  /cobv:
+    get:
+      parameters:
+        - in: query
+          name: inicio
+          required: true
+          schema:
+            - $ref: "#/components/schemas/Inicio"
+            - $ref: "#/components/parameters/Authorization"
+        - in: query
+          name: fim
+          required: true
+          schema:
+            $ref: "#/components/schemas/Fim"
+        - name: cpf
+          in: query
+          schema:
+            type: string
+            title: CPF
+            pattern: /^\d{11}$/
+            description: Filtro pelo CPF do devedor. Não pode ser utilizado ao mesmo tempo
+              que o CNPJ.
+        - name: cnpj
+          in: query
+          schema:
+            type: string
+            title: CNPJ
+            pattern: /^\d{14}$/
+            description: Filtro pelo CNPJ do devedor. Não pode ser utilizado ao mesmo tempo
+              que o CPF.
+        - name: locationPresente
+          in: query
+          schema:
+            type: boolean
+        - name: status
+          in: query
+          schema:
+            type: string
+            title: Status do registro da cobrança
+            description: Filtro pelo status da cobrança.
+        - name: loteCobVId
+          in: query
+          schema:
+            type: integer
+            format: int32
+            title: Id do lote de cobrança com vencimento
+            description: Id do lote de cobrança com vencimento.
+        - $ref: "#/components/parameters/paginaAtual"
+        - $ref: "#/components/parameters/itensPorPagina"
+        - $ref: "#/components/parameters/Authorization"
+      tags:
+        - CobV
+      summary: Consultar lista de cobranças com vencimento
+      security:
+        - OAuth2:
+            - cobv.read
+      description: Endpoint para consultar cobranças com vencimento através de
+        parâmetros como início, fim, cpf, cnpj e status.
+      responses:
+        "200":
+          description: Lista de cobranças com vencimento.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CobsVConsultadas"
+              examples:
+                getCobs1:
+                  $ref: "#/components/examples/getCobsV1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+  /lotecobv/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id do lote de cobranças com vencimento
+        examples:
+          default:
+            value: "{{txid}}"
+      - $ref: "#/components/parameters/Authorization"
+    put:
+      tags:
+        - LoteCobV
+      summary: Criar/Alterar lote de cobranças com vencimento
+      security:
+        - OAuth2:
+            - lotecobv.write
+      description: >-
+        Este endpoint cria ou altera lotes de cobranças com vencimento, mas
+        alterações só podem manter o conjunto original de cobranças, sem
+        adicionar ou remover itens.
+
+        Cobranças em "EM_PROCESSAMENTO" ou "NEGADA" não existem de fato e não
+        aparecem em consultas.
+
+        Cobranças criadas individualmente não podem ser associadas a lotes
+        depois, e cobranças em lote não podem ser movidas para outros lotes.
+      requestBody:
+        $ref: "#/components/requestBodies/LoteCobVBody"
+      responses:
+        "202":
+          description: Lote de cobranças com vencimento solicitado para criação.
+        "400":
+          description: Requisição com formato inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
+              examples:
+                exemplo1:
+                  $ref: "#/components/examples/RequisicaoInvalidaLoteCobVExample1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+    patch:
+      tags:
+        - LoteCobV
+      summary: Utilizado para revisar cobranças específicas dentro de um lote de
+        cobranças com vencimento.
+      security:
+        - OAuth2:
+            - lotecobv.write
+      description: O endpoint permite revisar cobranças específicas dentro de um lote
+        já existente, aceitando um array cobsv com menos cobranças do que a
+        requisição original. No entanto, não é possível adicionar ou remover
+        cobranças em relação à solicitação inicial do lote.
+      requestBody:
+        $ref: "#/components/requestBodies/LoteCobVBodyRevisado"
+      responses:
+        "202":
+          description: Solicitação de revisão do Lote de cobranças encaminhada para
+            processamento.
+        "400":
+          description: Requisição com formato inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
+              examples:
+                exemplo1:
+                  $ref: "#/components/examples/OperacaoInvalidaCobVExample1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+    get:
+      tags:
+        - LoteCobV
+      summary: Consultar um lote específico de cobranças com vencimento
+      security:
+        - OAuth2:
+            - lotecobv.read
+      description: Endpoint para consultar um lote de cobranças com vencimento.
+      responses:
+        "200":
+          description: Lote de cobranças com vencimento.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoteCobVConsultado"
+              examples:
+                exemplo1:
+                  $ref: "#/components/examples/loteCobVResponse1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+  /lotecobv:
+    get:
+      parameters:
+        - in: query
+          name: inicio
+          required: true
+          schema:
+            - $ref: "#/components/schemas/Inicio"
+        - in: query
+          name: fim
+          required: true
+          schema:
+            $ref: "#/components/schemas/Fim"
+        - $ref: "#/components/parameters/paginaAtual"
+        - $ref: "#/components/parameters/itensPorPagina"
+        - $ref: "#/components/parameters/Authorization"
+      tags:
+        - LoteCobV
+      summary: Consultar lotes de cobranças com vencimento
+      security:
+        - OAuth2:
+            - lotecobv.read
+      description: Endpoint para consultar lista de lotes de cobranças com vencimento.
+      responses:
+        "200":
+          description: Lotes de cobranças com vencimento.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LotesCobVConsultados"
+              examples:
+                exemplo1:
+                  $ref: "#/components/examples/getLotesCobsV"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+  /loc:
+    post:
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+      tags:
+        - PayloadLocation
+      summary: Criar location do payload
+      schema:
+        - $ref: "#/components/parameters/Authorization"
+      security:
+        - OAuth2:
+            - payloadlocation.write
+      description: Criar location do payload
+      requestBody:
+        $ref: "#/components/requestBodies/PayloadLocationBody"
+      responses:
+        "201":
+          description: Dados da location do Payload.
+          headers:
+            location:
+              schema:
+                type: string
+                format: uri
+                title: Identificador da location criada.
+                description: Identificador da location criada.
+                examples:
+                  - pix.example.com/api/loc/1234567
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayloadLocation"
+              examples:
+                getPayloadLocation1:
+                  $ref: "#/components/examples/payloadLocationResponse5"
+                getPayloadLocation2:
+                  $ref: "#/components/examples/payloadLocationResponse6"
+        "400":
+          description: Requisição com formato inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
+              examples:
+                exemplo1:
+                  $ref: "#/components/examples/RequisicaoInvalidaLocationExample1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+    get:
+      parameters:
+        - in: query
+          name: inicio
+          required: true
+          schema:
+            $ref: "#/components/schemas/Inicio"
+        - in: query
+          name: fim
+          required: true
+          schema:
+            $ref: "#/components/schemas/Fim"
+        - name: txIdPresente
+          in: query
+          schema:
+            type: boolean
+        - name: tipoCob
+          in: query
+          schema:
+            type: string
+            enum:
+              - cob
+              - cobv
+        - $ref: "#/components/parameters/paginaAtual"
+        - $ref: "#/components/parameters/itensPorPagina"
+        - $ref: "#/components/parameters/Authorization"
+      tags:
+        - PayloadLocation
+      summary: Consultar locations cadastradas
+      security:
+        - OAuth2:
+            - payloadlocation.read
+      description: Endpoint para consultar locations cadastradas
+      responses:
+        "200":
+          description: lista dos locations cadastrados de acordo com o critério de busca.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayloadLocationConsultadas"
+              examples:
+                getCobs1:
+                  $ref: "#/components/examples/getPayloadLocation1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+  /loc/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id da location cadastrada para servir um payload
+        examples:
+          default:
+            value: "{{txid}}"
+      - $ref: "#/components/parameters/Authorization"
+    get:
+      tags:
+        - PayloadLocation
+      summary: Recuperar location do payload
+      security:
+        - OAuth2:
+            - payloadlocation.read
+      description: Recupera a location do payload
+      responses:
+        "200":
+          description: Dados da location do Payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayloadLocationCompleta"
+              examples:
+                getPayloadLocation1:
+                  $ref: "#/components/examples/payloadLocationResponse1"
+                getPayloadLocation2:
+                  $ref: "#/components/examples/payloadLocationResponse2"
+                getPayloadLocation3:
+                  $ref: "#/components/examples/payloadLocationResponse3"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+  /loc/{id}/txid:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id da location cadastrada para servir um payload
+        examples:
+          default:
+            value: "{{txid}}"
+      - $ref: "#/components/parameters/Authorization"
+    delete:
+      tags:
+        - PayloadLocation
+      summary: Desvincular uma cobrança de uma location
+      description: O endpoint desvincula uma cobrança (cob ou cobv) de uma location.
+        Após a execução bem-sucedida, a entidade loc não terá mais um txid, e a
+        cobrança associada também deixará de exibir uma location, sem alterar
+        seu status.
+      security:
+        - OAuth2:
+            - payloadlocation.write
+      responses:
+        "200":
+          description: cobrança representada pelo txid informado desvinculada com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayloadLocation"
+              examples:
+                getPayloadLocation1:
+                  $ref: "#/components/examples/payloadLocationResponse4"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+  /pix/{e2eid}:
+    parameters:
+      - name: e2eid
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/EndToEndId"
+        examples:
+          default:
+            value: "{{e2eid}}"
+      - $ref: "#/components/parameters/Authorization"
+    get:
+      tags:
+        - Pix
+      summary: Consultar Pix
+      security:
+        - OAuth2:
+            - pix.read
+      description: Endpoint para consultar um Pix através de um e2eid.
+      responses:
+        "200":
+          description: Dados do Pix efetuado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pix"
+              examples:
+                retorno1:
+                  $ref: "#/components/examples/pixResponse1"
+                retorno2:
+                  $ref: "#/components/examples/pixResponse2"
+                retorno3:
+                  $ref: "#/components/examples/pixResponse3"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+  /pix:
+    get:
+      parameters:
+        - in: query
+          name: inicio
+          required: true
+          schema:
+            $ref: "#/components/schemas/Inicio"
+        - in: query
+          name: fim
+          required: true
+          schema:
+            $ref: "#/components/schemas/Fim"
+        - name: txid
+          in: query
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/txid"
+              - pattern: "[a-zA-Z0-9]{1,35}"
+        - name: txIdPresente
+          in: query
+          schema:
+            type: boolean
+        - name: devolucaoPresente
+          in: query
+          schema:
+            type: boolean
+        - name: cpf
+          in: query
+          schema:
+            type: string
+            title: CPF
+            pattern: /^\d{11}$/
+            description: Filtro pelo CPF do pagador. Não pode ser utilizado ao mesmo tempo
+              que o CNPJ.
+        - name: cnpj
+          in: query
+          schema:
+            type: string
+            title: CNPJ
+            pattern: /^\d{14}$/
+            description: Filtro pelo CNPJ do pagador. Não pode ser utilizado ao mesmo tempo
+              que o CPF.
+        - $ref: "#/components/parameters/paginaAtual"
+        - $ref: "#/components/parameters/itensPorPagina"
+        - $ref: "#/components/parameters/Authorization"
+      tags:
+        - Pix
+      summary: Consultar Pix recebidos
+      security:
+        - OAuth2:
+            - pix.read
+      description: Endpoint para consultar Pix recebidos
+      responses:
+        "200":
+          description: lista dos Pix recebidos de acordo com o critério de busca.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PixConsultados"
+              examples:
+                getCobs1:
+                  $ref: "#/components/examples/getPix1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+  /pix/{e2eid}/devolucao/{id}:
+    parameters:
+      - name: e2eid
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/EndToEndId"
+        examples:
+          default:
+            value: "{{e2eid}}"
+      - name: id
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/DevolucaoId"
+        examples:
+          default:
+            value: "{{txid}}"
+      - $ref: "#/components/parameters/Authorization"
+    put:
+      tags:
+        - Pix
+      summary: Solicitar devolução
+      security:
+        - OAuth2:
+            - pix.write
+      description: Endpoint utilizado para solicitar a devolução de um Pix com base no
+        identificador da transação e no ID da devolução, atribuindo
+        automaticamente o motivo conforme a natureza da devolução.
+      requestBody:
+        $ref: "#/components/requestBodies/DevolucaoBody"
+      responses:
+        "201":
+          description: Dados da devolução.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Devolucao"
+              examples:
+                retorno1:
+                  $ref: "#/components/examples/devolucaoResponse1"
+        "400":
+          description: Requisição com formato inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
+              examples:
+                exemplo1:
+                  $ref: "#/components/examples/RequisicaoInvalidaDevolucaoExample1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+    get:
+      tags:
+        - Pix
+      summary: Consultar devolução
+      security:
+        - OAuth2:
+            - pix.read
+      description: Endpoint para consultar uma devolução através de um End To End ID
+        do Pix e do ID da devolução
+      responses:
+        "200":
+          description: Dados da devolução.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Devolucao"
+              examples:
+                retorno1:
+                  $ref: "#/components/examples/devolucaoResponse1"
+                retorno2:
+                  $ref: "#/components/examples/devolucaoResponse2"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+  /{pixUrlAccessToken}:
+    parameters:
+      - name: pixUrlAccessToken
+        in: path
+        required: true
+        schema:
+          type: string
+        examples:
+          default:
+            value: "{pixUrlAccessToken}"
+      - $ref: "#/components/parameters/Authorization"
+    get:
+      tags:
+        - CobPayload
+      servers:
+        - url: https://{fdqnPSPRecebedor}/{endpointOpcional}
+          variables:
+            fdqnPSPRecebedor:
+              default: example.com
+              description: Endpoint base para que os usuários devedores possam acessar o
+                payload JSON que representa a cobrança imediata.
+      summary: Recuperar o payload JSON que representa a cobrança imediata
+      description: |
+        Endpoint (location) que serve um payload que representa uma cobrança imediata.
+
+        No momento que o usuário devedor efetua a leitura de um QR Code dinâmico gerado pelo recebedor, esta URL será acessada e seu conteúdo consiste em uma estrutura JWS.
+        As informações sobre a segurança no acesso às urls encontram-se no Manual de Segurança do Pix disponível em nesse __[link](https://www.bcb.gov.br/estabilidadefinanceira/comunicacaodados)__.
+      security: []
+      responses:
+        "200":
+          description: |
+            Descrição do Retorno:
+            O retorno desse endpoint é um objeto que apresenta estrutura JWS, conforme especificado no manual de segurança. Segue um exemplo:
+
+            ```jws
+            eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXUyIsImtpZCI6IjIwMTEtMDQtMjkiLCJqa3UiOiJodHRwczovL3Rvb2xzLmlldGYub3JnL2h0bWwvcmZjNzUxNyIsIng1dCI6IkFwcGVuZGl4QUV4YW1wbGVBMUpXS1NSc2FLZXkifQ.eyJjYWxlbmRhcmlvIjp7ImNyaWFjYW8iOiIyMDIwLTA5LTE1VDE5OjM5OjU0LjAxM1oiLCJhcHJlc2VudGFjYW8iOiIyMDIwLTA0LTAxVDE4OjAwOjAwWiIsImV4cGlyYWNhbyI6IjM2MDAifSwidHhpZCI6ImZjOWE0MzY2ZmYzZDQ5NjRiNWRiYzZjOTFhODcyMmQzIiwicmV2aXNhbyI6IjMiLCJzdGF0dXMiOiJBVElWQSIsInZhbG9yIjp7Im9yaWdpbmFsIjoiNTAwLjAwIn0sImNoYXZlIjoiNzQwN2M5YzgtZjc4Yi0xMWVhLWFkYzEtMDI0MmFjMTIwMDAyIiwic29saWNpdGFjYW9QYWdhZG9yIjoiSW5mb3JtYXIgY2FydGFvIGZpZGVsaWRhZGUiLCJpbmZvQWRpY2lvbmFpcyI6W3sibm9tZSI6InF1YW50aWRhZGUiLCJ2YWxvciI6IjIifV19.qI7NUrYkwcgXmyoyOjt2YLQyhxH-lPdr3xQ7RId9TDXZ-MlWmPJkUScjuo1Nz_EvlSotbWDGOxErBXHeTLHOQM-9T7lBmG5iw6uEX7L5U72XiganIm80EZCFD1vBPq9j89i4cP2U2Yv21TTt8JLhjA57KHLOSlj-KB5UAKCH-MX3AORFcrXFrYL2rrSQDe-lFNtdyPRwLQHIrhkQ6RR2FPhynzUG0401LScS9mWLLYbYzhzwtP5lk07Ryf4MZq86ihmOLFZXkIiW7pbSd8QfD5Dvj28XebLQi_bam9wInqKB--57_N741BskCN_TXf0EHbQ1qjNTgiT8Y1GIrA4pFA
+            ```
+
+            Este objeto JWS assinado deve ser validado pelo devedor. Maiores detalhes técnicos a respeito da especificação
+            de segurança encontram-se no __[Manual de Segurança do Pix](https://www.bcb.gov.br/estabilidadefinanceira/pix)__.
+
+            Conforme pode-se verificar no exemplo acima, o objeto JWS apresenta três fragmentos separados pelo caractere `.` (ponto). São eles: `header`, `payload` e `signature`.
+
+            Em termos de funcionalidade, o fragmento que interessa ao devedor é o `payload`, que apresenta estrutura conforme especificada pelo `schema` do presente endpoint, contendo detalhes concernentes à cobrança.
+          content:
+            application/jose:
+              schema:
+                $ref: "#/components/schemas/CobPayload"
+              examples:
+                retorno1:
+                  $ref: "#/components/examples/cobPayload1"
+        "400":
+          description: Requisição com formato inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
+              examples:
+                exemplo1:
+                  $ref: "#/components/examples/RequisicaoInvalidaCobPayloadExample1"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+  /cobv/{pixUrlAccessToken}:
+    parameters:
+      - name: pixUrlAccessToken
+        in: path
+        required: true
+        schema:
+          type: string
+        examples:
+          default:
+            value: "{pixUrlAccessToken}"
+      - name: codMun
+        in: query
+        description: >
+          Código baseado na Tabela de Códigos de Municípios do
+          __[IBGE](https://www.ibge.gov.br/explica/codigos-dos-municipios.php)__
+          que apresenta a lista dos municípios brasileiros associados a um
+          código composto de 7 dígitos, sendo os dois primeiros referentes ao
+          código da Unidade da Federação.
+        schema:
+          type: string
+          pattern: /^\d{7}$/
+          title: Código do município
+      - name: DPP
+        in: query
+        description: Data de pagamento pretendida. Trata-se de uma data, no formato
+          `YYYY-MM-DD`, segundo ISO 8601.
+        schema:
+          type: string
+          format: date
+          examples:
+            - 2021-04-01
+      - $ref: "#/components/parameters/Authorization"
+    get:
+      tags:
+        - CobPayload
+      servers:
+        - url: https://{fdqnPSPRecebedor}/{endpointOpcional}
+          variables:
+            fdqnPSPRecebedor:
+              default: example.com
+              description: Endpoint base para que os usuários devedores possam acessar o
+                payload JSON que representa a cobrança com vencimento.
+      summary: Recuperar o payload JSON que representa a cobrança com vencimento
+      description: |
+        Endpoint (location) que serve um payload que representa uma cobrança com vencimento.
+
+        No momento que o usuário devedor efetua a leitura de um QR Code dinâmico gerado pelo recebedor, esta URL será acessada e seu conteúdo consiste em uma estrutura JWS.
+        As informações sobre a segurança no acesso às urls encontram-se no Manual de Segurança do Pix disponível em nesse __[link](https://www.bcb.gov.br/estabilidadefinanceira/comunicacaodados)__.
+      security: []
+      responses:
+        "200":
+          description: |
+            Descrição do Retorno:
+            O retorno desse endpoint é um objeto que apresenta estrutura JWS, conforme especificado no manual de segurança. Segue um exemplo:
+
+            ```jws
+            eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXUyIsImtpZCI6IjIwMTEtMDQtMjkiLCJqa3UiOiJodHRwczovL3Rvb2xzLmlldGYub3JnL2h0bWwvcmZjNzUxNyIsIng1dCI6IkFwcGVuZGl4QUV4YW1wbGVBMUpXS1NSc2FLZXkifQ.eyJjYWxlbmRhcmlvIjp7ImNyaWFjYW8iOiIyMDIwLTA5LTE1VDE5OjM5OjU0LjAxM1oiLCJhcHJlc2VudGFjYW8iOiIyMDIwLTA0LTAxVDE4OjAwOjAwWiIsImRhdGFEZVZlbmNpbWVudG8iOiIyMDIwLTEyLTMxIiwidmFsaWRhZGVBcG9zVmVuY2ltZW50byI6MzB9LCJkZXZlZG9yIjp7ImxvZ3JhZG91cm8iOiJBbGFtZWRhIFNhbnRvcywgTnVtZXJvIDEwLCBCYWlycm8gQnJheiIsImNpZGFkZSI6IkRpYWRlbWEiLCJ1ZiI6IlNQIiwiY2VwIjoiNzA4MDAxMDAiLCJjbnBqIjoiNTY5ODkwMDAwMTk1MzMiLCJub21lIjoiRW1wcmVzYSBkZSBBbGltZW50b3MgU0EifSwicmVjZWJlZG9yIjp7ImxvZ3JhZG91cm8iOiJSdWEgMjAgTnVtZXJvIDcwLCBCYWlycm8gTHV6IiwiY2lkYWRlIjoiQmVsbyBIb3Jpem9udGUiLCJ1ZiI6Ik1HIiwiY2VwIjoiNTUxMjA3NTAiLCJjbnBqIjoiNTg5MDA2MzMxMjA3MTEiLCJub21lIjoiRW1wcmVzYSBkZSBBYmFzdGVjaW1lbnRvIFNBIn0sInR4aWQiOiJmYzlhNDM2NmZmM2Q0OTY0YjVkYmM2YzkxYTg3MjJkMyIsInJldmlzYW8iOiIzIiwic3RhdHVzIjoiQVRJVkEiLCJ2YWxvciI6eyJvcmlnaW5hbCI6IjEyMy40NSIsIm11bHRhIjoiMTUuMDAiLCJqdXJvcyI6IjIuMDAiLCJmaW5hbCI6IjE0MCw0NSJ9LCJjaGF2ZSI6Ijc0MDdjOWM4LWY3OGItMTFlYS1hZGMxLTAyNDJhYzEyMDAwMiIsInNvbGljaXRhY2FvUGFnYWRvciI6IkluZm9ybWFyIGNhcnRhbyBmaWRlbGlkYWRlIiwiaW5mb0FkaWNpb25haXMiOlt7Im5vbWUiOiJxdWFudGlkYWRlIiwidmFsb3IiOiIyIn1dfQ.BYibf_oK38IubbnnfThe4gaXuJgfoGQzFIezxHS76jGLQ4re2BwSdsiIzBW1t0JOtL094jLtJMVttdIdF9YJukrdzbknbf1jzfHghgBfNqXfZm7jxWuV8IO0jimoSoo7oMrG3MYytRFpdk2Q_ZhTL5UgZqVbfJkMwcp8o0FYmzrmiGPll-kgBulTgGgvGjzl-mC5dtl56351ix1-If1D7KAohHzcYTHzEFkvYZlNCcxyHJX94-8IqpYaTQ1rJlnPExPIgys-ioZ3U_QzcPz4d3tGvRAfHEU7VoIeZHeXR1jqKuqvz70ayc8mAbL7RXzJat1Ru_glS3krkSdXdZxK-w
+            ```
+
+            Este objeto JWS assinado deve ser validado pelo devedor. Maiores detalhes técnicos a respeito da especificação
+            de segurança encontram-se no __[Manual de Segurança do Pix](https://www.bcb.gov.br/estabilidadefinanceira/pix)__.
+
+            Conforme pode-se verificar no exemplo acima, o objeto JWS apresenta três fragmentos separados pelo caractere `.` (ponto). São eles: `header`, `payload` e `signature`.
+
+            Em termos de funcionalidade, o fragmento que interessa ao devedor é o `payload`, que apresenta estrutura conforme especificada pelo `schema` do presente endpoint, contendo detalhes concernentes à cobrança.
+          content:
+            application/jose:
+              schema:
+                $ref: "#/components/schemas/CobVPayload"
+              examples:
+                retorno1:
+                  $ref: "#/components/examples/cobPayload2"
+        "400":
+          description: Requisição com formato inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
+              examples:
+                exemplo1:
+                  $ref: "#/components/examples/RequisicaoInvalidaCobPayloadExample1"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+  /webhook/{chave}:
+    put:
+      tags:
+        - Webhook
+      summary: Configurar o Webhook Pix
+      description: >-
+        Endpoint utilizado para configurar o Webhook de notificação Pix.
+
+
+        A URL definida no campo `webhookUrl` será chamada sempre que um Pix com
+        `txid` for recebido.
+
+
+        Para mais informações consulte nossa [documentação de
+        Webhook](https://developers.c6bank.com.br/apis/webhook).
+      security:
+        - OAuth2:
+            - webhook.write
+      parameters:
+        - name: chave
+          in: path
+          required: true
+          schema:
+            type: string
+            title: Chave DICT do recebedor
+            maxLength: 77
+          examples:
+            default:
+              value: "{chave}"
+        - $ref: "#/components/parameters/Authorization"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookSolicitado"
+            examples:
+              exemplo1:
+                $ref: "#/components/examples/webhookBody1"
+      responses:
+        "200":
+          description: Webhook para notificações acerca de Pix recebidos associados a um
+            txid.
+        "400":
+          description: Requisição com formato inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
+              examples:
+                exemplo1:
+                  $ref: "#/components/examples/RequisicaoInvalidaWebhookExample1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+    get:
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+      tags:
+        - Webhook
+      summary: Exibir informações acerca do Webhook Pix
+      description: Endpoint para recuperação de informações sobre o Webhook Pix.
+      security:
+        - OAuth2:
+            - webhook.read
+      responses:
+        "200":
+          description: Dados do webhook.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookCompleto"
+              examples:
+                exemplo1:
+                  $ref: "#/components/examples/webhookResponse1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+    delete:
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+      tags:
+        - Webhook
+      summary: Cancelar o webhook Pix
+      description: >
+        Endpoint para cancelamento do webhook. Não é a única forma pela qual um
+        webhook pode ser
+
+        removido.
+
+
+        O PSP recebedor está livre para remover unilateralmente um webhook que
+        esteja associado
+
+        a uma chave que não pertence mais a este usuário recebedor.
+      security:
+        - OAuth2:
+            - webhook.write
+      responses:
+        "204":
+          description: Webhook para notificações Pix foi cancelado.
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+  /webhook:
+    get:
+      parameters:
+        - in: query
+          name: inicio
+          required: false
+          schema:
+            $ref: "#/components/schemas/Inicio"
+        - in: query
+          name: fim
+          required: false
+          schema:
+            $ref: "#/components/schemas/Fim"
+        - $ref: "#/components/parameters/paginaAtual"
+        - $ref: "#/components/parameters/itensPorPagina"
+        - $ref: "#/components/parameters/Authorization"
+      tags:
+        - Webhook
+      summary: Consultar webhooks cadastrados
+      security:
+        - OAuth2:
+            - webhook.read
+      description: Endpoint para consultar Webhooks cadastrados
+      responses:
+        "200":
+          description: lista dos locations cadastrados de acordo com o critério de busca.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhooksConsultados"
+              examples:
+                getCobs1:
+                  $ref: "#/components/examples/getWebhook1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  examples:
+    cobBody1:
+      summary: Exemplo de criação de cobrança com vencimento 1
+      value:
+        calendario:
+          dataDeVencimento: 2025-06-30
+          validadeAposVencimento: 30
+        devedor:
+          logradouro: Alameda Souza, Numero 80, Bairro Braz
+          cidade: Recife
+          uf: PE
+          cep: "70011750"
+          cpf: "12345678909"
+          nome: Francisco da Silva
+        valor:
+          original: "123.45"
+          multa:
+            modalidade: 2
+            valorPerc: "15.00"
+          juros:
+            modalidade: 2
+            valorPerc: "2.00"
+          desconto:
+            modalidade: 1
+            descontoDataFixa:
+              - data: 2024-11-30
+                valorPerc: "30.00"
+        chave: "{sua_chave_pix}"
+        solicitacaoPagador: Cobrança dos serviços prestados.
+    cobBody2:
+      summary: Exemplo de criação de cobrança imediata 1
+      value:
+        calendario:
+          expiracao: 3600
+        devedor:
+          cnpj: "12345678000195"
+          nome: Empresa de Serviços SA
+        valor:
+          original: "37.00"
+          modalidadeAlteracao: 1
+        chave: "{sua_chave_pix}"
+        solicitacaoPagador: Serviço realizado.
+        infoAdicionais:
+          - nome: Campo 1
+            valor: Informação Adicional1 do PSP-Recebedor
+          - nome: Campo 2
+            valor: Informação Adicional2 do PSP-Recebedor
+    cobBody3:
+      summary: Exemplo de revisão de cobrança 1
+      value:
+        devedor:
+          cpf: "12345678909"
+          nome: Francisco da Silva
+        valor:
+          original: "123.45"
+        solicitacaoPagador: Cobrança dos serviços prestados.
+    cobBody4:
+      summary: Exemplo de revisão de cobrança 2
+      value:
+        valor:
+          original: "567.89"
+        solicitacaoPagador: Informar cartão fidelidade
+    cobBody6:
+      summary: Exemplo de criação de cobrança imediata com Saque Pix
+      value:
+        devedor:
+          cnpj: "12345678000195"
+          nome: Empresa de Serviços SA
+        valor:
+          original: "0.00"
+          modalidadeAlteracao: 0
+          retirada:
+            saque:
+              valor: "5.00"
+              modalidadeAlteracao: 0
+              modalidadeAgente: AGPSS
+              prestadorDoServicoDeSaque: "12345678"
+        chave: "{sua_chave_pix}"
+    cobBody7:
+      summary: Exemplo de revisão de cobrança com vencimento 1
+      value:
+        devedor:
+          logradouro: Alameda Souza, Numero 80, Bairro Braz
+          cidade: Recife
+          uf: PE
+          cep: "70011750"
+          cpf: "12345678909"
+          nome: Francisco da Silva
+        valor:
+          original: "123.45"
+        solicitacaoPagador: Cobrança dos serviços prestados.
+    cobBody8:
+      summary: Exemplo de criação de cobrança imediata com Saque Pix 2
+      value:
+        devedor:
+          cnpj: "12345678000195"
+          nome: Empresa de Serviços SA
+        valor:
+          original: "0.00"
+          modalidadeAlteracao: 0
+          retirada:
+            saque:
+              valor: "20.00"
+              modalidadeAlteracao: 1
+              modalidadeAgente: AGPSS
+              prestadorDoServicoDeSaque: "12345678"
+        chave: "{sua_chave_pix}"
+    cobBody9:
+      summary: Exemplo de criação de cobrança imediata com Saque Pix 3
+      value:
+        devedor:
+          cnpj: "12345678000195"
+          nome: Empresa de Serviços SA
+        valor:
+          original: "10.00"
+          modalidadeAlteracao: 0
+          retirada:
+            troco:
+              valor: "0.00"
+              modalidadeAlteracao: 1
+              modalidadeAgente: AGTEC
+              prestadorDoServicoDeSaque: "12345678"
+        chave: "{sua_chave_pix}"
+    loteCobVBody1:
+      summary: Exemplo de criação de lote de cobranças com vencimento 1
+      value:
+        descricao: Cobranças dos alunos do turno vespertino
+        cobsv:
+          - calendario:
+              dataDeVencimento: 2025-12-31
+              validadeAposVencimento: 30
+            txid: fb2761260e554ad593c7226beb5cb650
+            devedor:
+              logradouro: Alameda Souza, Numero 80, Bairro Braz
+              cidade: Recife
+              uf: PE
+              cep: "70011750"
+              cpf: 8577095428
+              nome: João Souza
+            valor:
+              original: "100.00"
+            chave: "{sua_chave_pix}"
+            solicitacaoPagador: Informar matrícula
+          - calendario:
+              dataDeVencimento: 2025-12-31
+              validadeAposVencimento: 30
+            txid: 7978c0c97ea847e78e8849634473c1f1
+            loc:
+              id: 57221
+            devedor:
+              logradouro: Rua 15, Numero 1, Bairro Campo Grande
+              cidade: Recife
+              uf: PE
+              cep: "70055751"
+              cpf: "15311295449"
+              nome: Manoel Silva
+            valor:
+              original: "100.00"
+            chave: "{sua_chave_pix}"
+            solicitacaoPagador: Informar matrícula
+    loteCobVBodyRevisado1:
+      summary: Exemplo de revisão de lote de cobranças com vencimento 1
+      value:
+        cobsv:
+          - calendario:
+              dataDeVencimento: 2025-01-10
+            txid: fb2761260e554ad593c7226beb5cb650
+            valor:
+              original: "110.00"
+          - calendario:
+              dataDeVencimento: 2025-01-10
+            txid: 7978c0c97ea847e78e8849634473c1f1
+            valor:
+              original: "110.00"
+    cobResponse1:
+      summary: Exemplo de cobrança imediata 1
+      value:
+        calendario:
+          criacao: 2025-09-09T20:15:00.358Z
+          expiracao: 3600
+        txid: 7978c0c97ea847e78e8849634473c1f1
+        revisao: 0
+        loc:
+          id: 789
+          location: pix.example.com/qr/9d36b84fc70b478fb95c12729b90ca25
+          tipoCob: cob
+        location: pix.example.com/qr/9d36b84fc70b478fb95c12729b90ca25
+        status: ATIVA
+        devedor:
+          cnpj: "12345678000195"
+          nome: Empresa de Serviços SA
+        valor:
+          original: "37.00"
+          modalidadeAlteracao: 1
+        chave: "{sua_chave_pix}"
+        solicitacaoPagador: Serviço realizado.
+        infoAdicionais:
+          - required: false
+          - nome: Campo 1
+            valor: Informação Adicional1 do PSP-Recebedor
+          - nome: Campo 2
+            valor: Informação Adicional2 do PSP-Recebedor
+    cobResponse2:
+      summary: Exemplo de cobrança imediata 2
+      value:
+        calendario:
+          criacao: 2025-09-09T20:15:00.358Z
+          expiracao: 3600
+        txid: 655dfdb1a4514b8fbb58254b958913fb
+        revisao: 1
+        loc:
+          id: 567
+          location: pix.example.com/qr/1dd7f893a58e417287028dc33e21a403
+        location: pix.example.com/qr/1dd7f893a58e417287028dc33e21a403
+        status: CONCLUIDA
+        devedor:
+          cnpj: "12345678000195"
+          nome: Empresa de Serviços SA
+        valor:
+          original: "100.00"
+          modalidadeAlteracao: 0
+        chave: 40a0932d-1918-4eee-845d-35a2da1690dc
+        solicitacaoPagador: Informar cartão fidelidade
+        pix:
+          - endToEndId: E12345678202009091221kkkkkkkkkkk
+            txid: 655dfdb1a4514b8fbb58254b958913fb
+            valor: "110.00"
+            horario: 2025-09-09T20:15:00.358Z
+            infoPagador: 123456789
+            devolucoes:
+              - id: 123ABC
+                rtrId: Dxxxxxxxx202009091221kkkkkkkkkkk
+                valor: "10.00"
+                horario:
+                  solicitacao: 2025-09-09T20:15:00.358Z
+                status: EM_PROCESSAMENTO
+    cobResponse3:
+      summary: Exemplo de cobrança revisada 1
+      value:
+        calendario:
+          criacao: 2025-09-09T20:15:00.358Z
+          expiracao: 3600
+        txid: 7978c0c97ea847e78e8849634473c1f1
+        revisao: 1
+        loc:
+          id: 7768
+          location: pix.example.com/qr/b1/9d36b84fc70b478fb95c12729b90ca25
+          tipoCob: cob
+        location: pix.example.com/qr/v1/9d36b84fc70b478fb95c12729b90ca25
+        status: ATIVA
+        devedor:
+          cpf: "12345678909"
+          nome: Francisco da Silva
+        valor:
+          original: "123.45"
+          modalidadeAlteracao: 0
+        chave: a1f4102e-a446-4a57-bcce-6fa48899c1d1
+        solicitacaoPagador: Cobrança dos serviços prestados.
+    cobResponse4:
+      summary: Exemplo de cobrança com vencimento 1
+      value:
+        calendario:
+          criacao: 2025-09-09T20:15:00.358Z
+          dataDeVencimento: 2025-12-31
+          validadeAposVencimento: 30
+        txid: 7978c0c97ea847e78e8849634473c1f1
+        revisao: 0
+        loc:
+          id: 789
+          location: pix.example.com/qr/c2/cobv/9d36b84fc70b478fb95c12729b90ca25
+          tipoCob: cobv
+        status: ATIVA
+        devedor:
+          logradouro: Alameda Souza, Numero 80, Bairro Braz
+          cidade: Recife
+          uf: PE
+          cep: "70011750"
+          cpf: "12345678909"
+          nome: Francisco da Silva
+        recebedor:
+          logradouro: Rua 15 Numero 1200, Bairro São Luiz
+          cidade: São Paulo
+          uf: SP
+          cep: "70800100"
+          cnpj: "56989000019533"
+          nome: Empresa de Logística SA
+        valor:
+          original: "123.45"
+        chave: 5f84a4c5-c5cb-4599-9f13-7eb4d419dacc
+        solicitacaoPagador: Cobrança dos serviços prestados.
+    cobResponse5:
+      summary: Exemplo de cobrança imediata com Saque Pix
+      value:
+        calendario:
+          criacao: 2025-09-09T20:15:00.358Z
+          expiracao: 3600
+        txid: 33beb661beda44a8928fef47dbeb2dc5
+        revisao: 0
+        loc:
+          id: 1004
+          location: pix.example.com/qr/7faa6893c4e64893a503baf0d40af213
+          tipoCob: cob
+        location: pix.example.com/qr/7faa6893c4e64893a503baf0d40af213
+        status: ATIVA
+        devedor:
+          cnpj: "12345678000195"
+          nome: Empresa de Serviços SA
+        valor:
+          original: "0.00"
+          modalidadeAlteracao: 0
+          retirada:
+            saque:
+              valor: "5.00"
+              modalidadeAlteracao: 0
+              modalidadeAgente: AGPSS
+              prestadorDoServicoDeSaque: "12345678"
+        chave: 7d9f0335-8dcc-4054-9bf9-0dbd61d36906
+    cobResponse6:
+      summary: Exemplo de cobrança imediata com Saque Pix 2
+      value:
+        calendario:
+          criacao: 2025-09-09T20:15:00.358Z
+          expiracao: 3600
+        txid: 33beb661beda44a8928fef47dbeb2dc5
+        revisao: 0
+        loc:
+          id: 1004
+          location: pix.example.com/qr/7faa6893c4e64893a503baf0d40af213
+          tipoCob: cob
+        location: pix.example.com/qr/7faa6893c4e64893a503baf0d40af213
+        status: ATIVA
+        devedor:
+          cnpj: "12345678000195"
+          nome: Empresa de Serviços SA
+        valor:
+          original: "0.00"
+          modalidadeAlteracao: 0
+          retirada:
+            saque:
+              valor: "20.00"
+              modalidadeAlteracao: 1
+              modalidadeAgente: AGPSS
+              prestadorDoServicoDeSaque: "12345678"
+        chave: 7d9f0335-8dcc-4054-9bf9-0dbd61d36906
+    cobResponse7:
+      summary: Exemplo de cobrança imediata com Saque Pix 3
+      value:
+        calendario:
+          criacao: 2025-09-09T20:15:00.358Z
+          expiracao: 3600
+        txid: 33beb661beda44a8928fef47dbeb2dc5
+        revisao: 0
+        loc:
+          id: 1004
+          location: pix.example.com/qr/7faa6893c4e64893a503baf0d40af213
+          tipoCob: cob
+        location: pix.example.com/qr/7faa6893c4e64893a503baf0d40af213
+        status: ATIVA
+        devedor:
+          cnpj: "12345678000195"
+          nome: Empresa de Serviços SA
+        valor:
+          original: "10.00"
+          modalidadeAlteracao: 0
+          retirada:
+            troco:
+              valor: "0.00"
+              modalidadeAlteracao: 1
+              modalidadeAgente: AGTEC
+              prestadorDoServicoDeSaque: "12345678"
+        chave: 7d9f0335-8dcc-4054-9bf9-0dbd61d36906
+    loteCobVResponse1:
+      summary: Exemplo de lote de cobranças com vencimento 1
+      value:
+        descricao: Cobranças dos alunos do turno vespertino
+        criacao: 2025-11-01T20:15:00.358Z
+        cobsv:
+          - criacao: 2025-11-01T20:15:00.358Z
+            txid: fb2761260e554ad593c7226beb5cb650
+            status: CRIADA
+          - txid: 7978c0c97ea847e78e8849634473c1f1
+            status: NEGADA
+            problema:
+              type: https://pix.bcb.gov.br/api/v2/error/CobVOperacaoInvalida
+              title: Cobrança inválida.
+              status: 400
+              detail: A requisição que busca alterar ou criar uma cobrança com vencimento não
+                respeita o _schema_ ou está semanticamente errada.
+              violacoes:
+                - razao: O objeto cobv.devedor não respeita o _schema_.
+                  propriedade: cobv.devedor
+    loteCobVResponse2:
+      summary: Exemplo de lote de cobranças com vencimento 2
+      value:
+        descricao: Cobranças dos assinantes anuais
+        criacao: 2025-11-17T20:00:00.358Z
+        cobsv:
+          - criacao: 2025-11-17T20:00:00.358Z
+            txid: 06601eaa3822423fbe897f613b983e01
+            status: CRIADA
+          - criacao: 2025-11-17T20:00:00.358Z
+            txid: 4e07059760d54cf493de6e7f1fbfad9a
+            status: CRIADA
+    payloadLocationBody1:
+      summary: Exemplo de Payload Location 1
+      value:
+        tipoCob: cob
+    payloadLocationBody2:
+      summary: Exemplo de Payload Location 2
+      value:
+        tipoCob: cobv
+    payloadLocationResponse1:
+      summary: Exemplo de Payload Location 1
+      value:
+        id: 7716
+        txid: fda9460fe04e4f129b72863ae57ee22f
+        location: pix.example.com/qr/v2/cobv/2353c790eefb11eaadc10242ac120002
+        tipoCob: cobv
+        criacao: 2025-03-11T21:19:51.013Z
+    payloadLocationResponse2:
+      summary: Exemplo de Payload Location 2
+      value:
+        id: 856
+        txid: 31e08604f9ce459bb59672332af8d672
+        location: pix.example.com/qr/v2/cobv/39c9f435c6324867aa1dec1260e1127c
+        tipoCob: cobv
+        criacao: 2025-02-10T19:22:52.013Z
+    payloadLocationResponse3:
+      summary: Exemplo de Payload Location 3
+      value:
+        id: 2316
+        txid: eb9d87f36fca4c92b7d5ec48e2ee3853
+        location: pix.example.com/qr/v2/a8534e273ecb47d3ac30613104544466
+        tipoCob: cob
+        criacao: 2025-05-31T19:39:54.013Z
+    payloadLocationResponse4:
+      summary: Exemplo de Payload Location 3
+      value:
+        id: 2316
+        location: pix.example.com/qr/v2/a8534e273ecb47d3ac30613104544466
+        tipoCob: cob
+        criacao: 2025-05-31T19:39:54.013Z
+    payloadLocationResponse5:
+      summary: Exemplo de Payload Location 1
+      value:
+        id: 7716
+        location: pix.example.com/qr/v2/2353c790eefb11eaadc10242ac120002
+        tipoCob: cob
+        criacao: 2025-03-11T21:19:51.013Z
+    payloadLocationResponse6:
+      summary: Exemplo de Payload Location 2
+      value:
+        id: 856
+        location: pix.example.com/qr/v2/cobv/39c9f435c6324867aa1dec1260e1127c
+        tipoCob: cobv
+        criacao: 2025-02-10T19:22:52.013Z
+    pixResponse1:
+      summary: Exemplo de Pix 1
+      value:
+        endToEndId: E12345678202009091221abcdef12345
+        txid: cd1fe328c875481285a6f233ae41b662
+        valor: "100.00"
+        horario: 2025-09-10T13:03:33.902Z
+        infoPagador: Reforma da casa
+        devolucoes:
+          - id: 000AAA111
+            rtrId: D12345678202009091000abcde123456
+            valor: "11.00"
+            horario:
+              solicitacao: 2025-09-10T13:03:33.902Z
+            status: EM_PROCESSAMENTO
+    pixResponse2:
+      summary: Exemplo de Pix 2
+      value:
+        endToEndId: E12345678202009091221ghijk78901234
+        txid: 5b933948f3224266b1050ac54319e775
+        valor: "200.00"
+        horario: 2025-09-10T13:03:33.902Z
+        infoPagador: Revisão do carro
+    pixResponse3:
+      summary: Exemplo de Pix com Saque
+      value:
+        endToEndId: E88631478202009091221ghijk78901234
+        txid: 82433415910c47e5adb6ac3527cca160
+        valor: "200.00"
+        componentesValor:
+          original:
+            valor: "180.00"
+          saque:
+            valor: "20.00"
+            modalidadeAgente: AGPSS
+            prestadorDeServicoDeSaque: "12345678"
+        horario: 2025-09-10T13:03:33.902Z
+        infoPagador: Saque Pix
+    webhookBody1:
+      summary: Exemplo de configuração de Webhook 1
+      value:
+        webhookUrl: https://pix.example.com/api/webhook/
+    webhookResponse1:
+      summary: Exemplo de consulta de Webhook 1
+      value:
+        webhookUrl: https://pix.example.com/api/webhook/
+        chave: 40a0932d-1918-4eee-845d-35a2da1690dc
+        criacao: 2025-11-11T10:15:00.358Z
+    pixWebhook1:
+      summary: Exemplo de Webhook Pix 1
+      value:
+        endToEndId: E12345678202009091221kkkkkkkkkkk
+        txid: c3e0e7a4e7f1469a9f782d3d4999343c
+        valor: "110.00"
+        horario: 2025-09-09T20:15:00.358Z
+        infoPagador: 123456789
+        devolucoes:
+          id: 123ABC
+          rtrId: D12345678202009091221abcdf098765
+          valor: "10.00"
+          horario:
+            solicitacao: 2025-09-09T20:15:00.358Z
+          status: EM_PROCESSAMENTO
+    pixWebhook2:
+      summary: Exemplo de Webhook Pix 2
+      value:
+        endToEndId: E87654321202009091221dfghi123456
+        txid: 971122d8f37211eaadc10242ac120002
+        valor: "110.00"
+        horario: 2025-09-09T20:15:00.358Z
+        infoPagador: 123456789
+    devolucaoResponse1:
+      summary: Exemplo de devolução 1
+      value:
+        id: "123456"
+        rtrId: D12345678202009091000abcde123456
+        valor: "7.89"
+        horario:
+          solicitacao: 2025-09-11T15:25:59.411Z
+        status: EM_PROCESSAMENTO
+    devolucaoResponse2:
+      summary: Exemplo de devolução 2
+      value:
+        id: "502"
+        rtrId: D12345678202011111000fghij789012
+        valor: "20.00"
+        horario:
+          solicitacao: 2025-09-11T15:25:59.411Z
+        status: NAO_REALIZADO
+        motivo: Negado por timeout
+    devolucaoSolicitada1:
+      summary: Exemplo de solicitação de devolução 1
+      value:
+        valor: "7.89"
+    cobPayload1:
+      summary: Exemplo de payload de cobrança imediata 1
+      value:
+        calendario:
+          criacao: 2025-09-15T19:39:54.013Z
+          apresentacao: 2025-04-01T18:00:00Z
+          expiracao: 3600
+        txid: fc9a4366ff3d4964b5dbc6c91a8722d3
+        revisao: 3
+        status: ATIVA
+        valor:
+          original: "500.00"
+          modalidadeAlteracao: 0
+        chave: 7407c9c8-f78b-11ea-adc1-0242ac120002
+        solicitacaoPagador: Informar cartao fidelidade
+        infoAdicionais:
+          - required: false
+          - nome: quantidade
+            valor: "2"
+    cobPayload2:
+      summary: Exemplo de payload de cobrança com vencimento 1
+      value:
+        calendario:
+          criacao: 2025-09-15T19:39:54.013Z
+          apresentacao: 2025-04-01T18:00:00Z
+          dataDeVencimento: 2025-12-31
+          validadeAposVencimento: 30
+        devedor:
+          cnpj: "56989000019533"
+          nome: Empresa de Alimentos SA
+        recebedor:
+          logradouro: Rua 20 Numero 70, Bairro Luz
+          cidade: Belo Horizonte
+          uf: MG
+          cep: "55120750"
+          cnpj: "58900633120711"
+          nome: Empresa de Abastecimento SA
+        txid: fc9a4366ff3d4964b5dbc6c91a8722d3
+        revisao: 3
+        status: ATIVA
+        valor:
+          original: "123.45"
+          multa: "15.00"
+          juros: "2.00"
+          final: "140.45"
+        chave: 7407c9c8-f78b-11ea-adc1-0242ac120002
+        solicitacaoPagador: Informar cartao fidelidade
+        infoAdicionais:
+          - required: false
+          - nome: quantidade
+            valor: "2"
+    getCobs1:
+      summary: Exemplo de retorno da consulta de cobranças 1
+      value:
+        parametros:
+          inicio: 2025-04-01T00:00:00Z
+          fim: 2025-04-02T10:00:00Z
+          paginacao:
+            paginaAtual: 0
+            itensPorPagina: 100
+            quantidadeDePaginas: 1
+            quantidadeTotalDeItens: 2
+        cobs:
+          - allOf:
+              - $ref: "#/components/examples/cobResponse1/value"
+          - allOf:
+              - $ref: "#/components/examples/cobResponse2/value"
+          - allOf:
+              - $ref: "#/components/examples/cobResponse5/value"
+          - allOf:
+              - $ref: "#/components/examples/cobResponse6/value"
+          - allOf:
+              - $ref: "#/components/examples/cobResponse7/value"
+    getCobs2:
+      summary: Exemplo de retorno da consulta de cobranças 2
+      value:
+        parametros:
+          inicio: 2025-04-01T00:00:00Z
+          fim: 2025-04-01T23:59:59Z
+          paginacao:
+            paginaAtual: 0
+            itensPorPagina: 100
+            quantidadeDePaginas: 1
+            quantidadeTotalDeItens: 1
+        cobs:
+          - allOf:
+              - $ref: "#/components/examples/cobResponse1/value"
+    getCobsV1:
+      summary: Exemplo de retorno da consulta de cobranças com vencimento 1
+      value:
+        parametros:
+          inicio: 2025-04-01T00:00:00Z
+          fim: 2025-04-01T23:59:59Z
+          paginacao:
+            paginaAtual: 0
+            itensPorPagina: 100
+            quantidadeDePaginas: 1
+            quantidadeTotalDeItens: 1
+        cobs:
+          - allOf:
+              - $ref: "#/components/examples/cobResponse4/value"
+    getPix1:
+      summary: Exemplo de retorno da consulta de Pix 1
+      value:
+        parametros:
+          inicio: 2025-04-01T00:00:00Z
+          fim: 2025-04-01T23:59:59Z
+          paginacao:
+            paginaAtual: 0
+            itensPorPagina: 100
+            quantidadeDePaginas: 1
+            quantidadeTotalDeItens: 2
+        pix:
+          - allOf:
+              - $ref: "#/components/examples/pixResponse1/value"
+          - allOf:
+              - $ref: "#/components/examples/pixResponse2/value"
+          - allOf:
+              - $ref: "#/components/examples/pixResponse3/value"
+    getLotesCobsV:
+      summary: Exemplo de retorno da consulta de Pix 1
+      value:
+        parametros:
+          inicio: 2025-01-01T00:00:00Z
+          fim: 2025-12-01T23:59:59Z
+          paginacao:
+            paginaAtual: 0
+            itensPorPagina: 100
+            quantidadeDePaginas: 1
+            quantidadeTotalDeItens: 2
+        lotes:
+          - allOf:
+              - $ref: "#/components/examples/loteCobVResponse1/value"
+          - allOf:
+              - $ref: "#/components/examples/loteCobVResponse2/value"
+    getPayloadLocation1:
+      summary: Exemplo de retorno da consulta de locations 1
+      value:
+        parametros:
+          inicio: 2025-04-01T00:00:00Z
+          fim: 2025-04-01T23:59:59Z
+          paginacao:
+            paginaAtual: 0
+            itensPorPagina: 100
+            quantidadeDePaginas: 1
+            quantidadeTotalDeItens: 3
+        loc:
+          - allOf:
+              - $ref: "#/components/examples/payloadLocationResponse1/value"
+          - allOf:
+              - $ref: "#/components/examples/payloadLocationResponse2/value"
+          - allOf:
+              - $ref: "#/components/examples/payloadLocationResponse3/value"
+    getWebhook1:
+      summary: Exemplo de retorno da consulta de Webhooks 1
+      value:
+        parametros:
+          inicio: 2025-04-01T00:00:00Z
+          fim: 2025-04-01T23:59:59Z
+          paginacao:
+            paginaAtual: 0
+            itensPorPagina: 100
+            quantidadeDePaginas: 1
+            quantidadeTotalDeItens: 1
+        webhooks:
+          - allOf:
+              - $ref: "#/components/examples/webhookResponse1/value"
+    RequisicaoInvalidaCobExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/CobOperacaoInvalida
+        title: Cobrança inválida.
+        status: 400
+        detail: A requisição que busca alterar ou criar uma cobrança para pagamento
+          imediato não respeita o _schema_ ou está semanticamente errada.
+        violacoes:
+          - razao: O campo cob.valor.original não respeita o _schema_.
+            propriedade: cob.valor.original
+    OperacaoInvalidaCobExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/CobOperacaoInvalida
+        title: Operação inválida.
+        status: 400
+        detail: A requisição que busca alterar ou criar uma cobrança para pagamento
+          imediato não respeita o _schema_ ou está semanticamente errada.
+    RequisicaoInvalidaCobVExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/CobVOperacaoInvalida
+        title: Cobrança inválida.
+        status: 400
+        detail: A requisição que busca alterar ou criar uma cobrança com vencimento não
+          respeita o _schema_ ou está semanticamente errada.
+        violacoes:
+          - razao: O objeto cobv.devedor não respeita o _schema_.
+            propriedade: cobv.devedor
+    OperacaoInvalidaCobVExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/CobVOperacaoInvalida
+        title: Operação inválida.
+        status: 400
+        detail: Cobrança não encontra-se mais com o status ATIVA, somente cobranças
+          ativas podem ser revisadas.
+    RequisicaoInvalidaCobPayloadExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/CobPayloadNaoEncontrado
+        title: Cobrança não encontrada.
+        status: 404
+        detail: A cobrança em questão não foi encontrada para a location requisitada.
+    RequisicaoInvalidaLoteCobVExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/LoteCobVOperacaoInvalida
+        title: Lote de cobranças inválido.
+        status: 400
+        detail: A requisição que busca alterar ou criar um lote de cobranças com
+          vencimento não respeita o _schema_ ou está semanticamente errada.
+        violacoes:
+          - razao: O objeto loteCobV.cobsV não respeita o _schema_.
+            propriedade: loteCobV.cobsV
+          - razao: O campo loteCobV.descricao não respeita o _schema_.
+            propriedade: loteCobV.descricao
+    RequisicaoInvalidaDevolucaoExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/PixDevolucaoInvalida
+        title: Devolução inválida.
+        status: 400
+        detail: A presente requisição de devolução não respeita o _schema_ ou não faz
+          sentido semanticamente.
+    RequisicaoInvalidaWebhookExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/WebhookOperacaoInvalida
+        title: Webhook inválido.
+        status: 400
+        detail: A presente requisição busca criar um webhook sem respeitar o _schema_
+          ou, ainda, com sentido semanticamente inválido.
+    RequisicaoInvalidaLocationExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/PayloadLocationOperacaoInvalida
+        title: PayloadLocation inválido.
+        status: 400
+        detail: A presente requisição busca criar uma location sem respeitar o _schema_
+          estabelecido.
+    AcessoNegadoExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/AcessoNegado
+        title: Acesso Negado
+        status: 403
+        detail: Requisição de participante autenticado que viola alguma regra de
+          autorização.
+    NaoEncontradoExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/NaoEncontrado
+        title: Não Encontrado
+        status: 404
+        detail: Entidade não encontrada.
+    ServicoIndisponivelExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/ServicoIndisponivel
+        title: Serviço Indisponível
+        status: 503
+        detail: Serviço não está disponível no momento. Serviço solicitado pode estar em
+          manutenção ou fora da janela de funcionamento.
+    WebhookCallbackExample:
+      summary: Exemplo de Callback de Webhook para Notificação de Pix
+      value:
+        txid: "1234567890"
+        valor: "150.00"
+        status: RECEBIDO
+        pix:
+          - txid: abc123
+            valor: "100.00"
+            horario: 2025-05-02T14:30:00Z
+            endToEndId: endtoend12345
+            pagador: João da Silva
+            componentesValor:
+              original:
+                valor: "100.00"
+          - txid: xyz789
+            valor: "50.00"
+            horario: 2025-05-02T15:00:00Z
+            endToEndId: endtoend67890
+            pagador: Maria Souza
+            componentesValor:
+              original:
+                valor: "50.00"
+        chave: joao.silva@banco.com
+        infoPagador: Pagamento referente a serviços prestados
+        devolucoes: []
+  requestBodies:
+    CobBody:
+      description: Dados para geração da cobrança imediata.
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/CobSolicitada"
+          examples:
+            exemplo1:
+              $ref: "#/components/examples/cobBody2"
+            exemplo2:
+              $ref: "#/components/examples/cobBody6"
+            exemplo3:
+              $ref: "#/components/examples/cobBody8"
+            exemplo4:
+              $ref: "#/components/examples/cobBody9"
+    CobVBody:
+      description: Dados para geração da cobrança com vencimento.
+      required: true
+      content:
+        application/json:
+          schema: null
+          $ref: "#/components/schemas/CobVSolicitada"
+          examples:
+            exemplo1:
+              $ref: "#/components/examples/cobBody1"
+    LoteCobVBody:
+      description: Dados para geração de lote de cobranças com vencimento.
+      required: true
+      content:
+        application/json:
+          schema:
+            required:
+              - descricao
+              - cobsv
+            properties:
+              descricao:
+                type: string
+                title: Descrição do lote
+              cobsv:
+                type: array
+                items:
+                  allOf:
+                    - type: object
+                      required:
+                        - txid
+                      properties:
+                        txid:
+                          $ref: "#/components/schemas/txid"
+                    - $ref: "#/components/schemas/CobVSolicitada"
+          examples:
+            exemplo1:
+              $ref: "#/components/examples/loteCobVBody1"
+    LoteCobVBodyRevisado:
+      description: Dados para geração de lote de cobranças com vencimento.
+      required: true
+      content:
+        application/json:
+          schema:
+            properties:
+              descricao:
+                type: string
+                title: Descrição do lote
+              cobsv:
+                type: array
+                items:
+                  allOf:
+                    - type: object
+                      required:
+                        - txid
+                      properties:
+                        txid:
+                          $ref: "#/components/schemas/txid"
+                    - $ref: "#/components/schemas/CobVRevisada"
+          examples:
+            exemplo1:
+              $ref: "#/components/examples/loteCobVBodyRevisado1"
+    CobBodyRevisada:
+      description: Dados para geração da cobrança.
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/CobRevisada"
+          examples:
+            exemplo1:
+              $ref: "#/components/examples/cobBody3"
+            exemplo2:
+              $ref: "#/components/examples/cobBody4"
+            exemplo3:
+              $ref: "#/components/examples/cobBody5"
+    CobVBodyRevisada:
+      description: Dados para geração da cobrança.
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/CobVRevisada"
+          examples:
+            exemplo1:
+              $ref: "#/components/examples/cobBody7"
+            exemplo2:
+              $ref: "#/components/examples/cobBody4"
+            exemplo3:
+              $ref: "#/components/examples/cobBody5"
+    PayloadLocationBody:
+      description: Dados para geração da location.
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PayloadLocationSolicitada"
+          examples:
+            exemplo1:
+              $ref: "#/components/examples/payloadLocationBody1"
+    DevolucaoBody:
+      description: Dados para pedido de devolução.
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/DevolucaoSolicitada"
+          examples:
+            exemplo1:
+              $ref: "#/components/examples/devolucaoSolicitada1"
+    WebhookConfigBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/WebhookSolicitado"
+          examples:
+            exemplo1:
+              $ref: "#/components/examples/webhookBody1"
+    WebhookPixBody:
+      description: Dados para notificação dos Pix.
+      required: true
+      content:
+        application/json:
+          schema:
+            properties:
+              pix:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Pix"
+                examples:
+                  - - allOf:
+                        - $ref: "#/components/examples/pixWebhook1/value"
+                    - allOf:
+                        - $ref: "#/components/examples/pixWebhook2/value"
+  schemas:
+    CobApresentacao:
+      type: object
+      title: cob-apresentação
+      required:
+        - apresentacao
+      properties:
+        apresentacao:
+          type: string
+          format: date-time
+          description: Timestamp que indica o momento em que os dados da cobrança foram
+            recuperados, geralmente quando o usuário lê o QR Code.
+    CobBase:
+      type: object
+      title: cob-base
+      description: Atributos comuns a todas entidades de Cobrança
+      properties:
+        chave:
+          required: true
+          type: string
+          title: Chave DICT do recebedor
+          description: |-
+            Chave Pix registrada no DICT.
+            Os tipos de chave podem ser: telefone, e-mail, cpf/cnpj ou EVP.
+          maxLength: 77
+        solicitacaoPagador:
+          type: string
+          title: solicitacao-pagador
+          description: O campo solicitacaoPagador, determina um texto a ser apresentado ao
+            pagador para que ele possa digitar uma informação correlata, em
+            formato livre, a ser enviada ao recebedor.
+          maxLength: 140
+        infoAdicionais:
+          required: false
+          type: array
+          title: Informações adicionais
+          description: Cada respectiva informação adicional contida na lista (nome e
+            valor) deve ser apresentada ao pagador.
+          maximum: 50
+          items:
+            type: object
+            required:
+              - nome
+              - valor
+            properties:
+              nome:
+                type: string
+                title: Nome
+                description: Nome do campo.
+                maxLength: 50
+              valor:
+                type: string
+                title: Valor
+                description: Dados do campo.
+                maxLength: 200
+    CobBaseCopiaCola:
+      type: object
+      title: cob-base-copia-cola
+      description: Atributos comuns a todas entidades de Cobrança que possuem
+        informação de Copia e Cola
+      allOf:
+        - type: object
+          properties:
+            pixCopiaECola:
+              type: string
+              title: Pix Copia e Cola correspondente à cobrança.
+              description: Este campo retorna o valor do Pix Copia e Cola correspondente à
+                cobrança. Trata-se da sequência de caracteres que representa o
+                BR Code.
+              maxLength: 512
+        - $ref: "#/components/schemas/CobBase"
+    CobCompleta:
+      title: cob-completo
+      required:
+        - status
+      allOf:
+        - $ref: "#/components/schemas/CobSolicitada"
+        - $ref: "#/components/schemas/CobGerada"
+        - type: object
+          properties:
+            status:
+              $ref: "#/components/schemas/CobrancaStatus"
+        - type: object
+          properties:
+            pix:
+              type: array
+              title: Pix recebidos
+              items:
+                allOf:
+                  - $ref: "#/components/schemas/Pix"
+                  - type: object
+                    properties:
+                      txid:
+                        allOf:
+                          - $ref: "#/components/schemas/txid"
+                          - pattern: "[a-zA-Z0-9]{26,35}"
+    CobCriacao:
+      type: object
+      title: cob-criação
+      required:
+        - criacao
+      properties:
+        criacao:
+          type: string
+          format: date-time
+          description: Timestamp que indica o momento em que foi criada a cobrança.
+    CobDataDeVencimento:
+      type: object
+      title: cob-data-de-vencimento
+      required:
+        - dataDeVencimento
+      properties:
+        dataDeVencimento:
+          type: string
+          format: date
+          description: Data de vencimento da cobrança, no formato `YYYY-MM-DD`.
+          examples:
+            - 2025-06-01
+        validadeAposVencimento:
+          type: integer
+          format: int32
+          description: >-
+            Define quantos dias corridos após a data de vencimento uma cobrança
+            ainda pode ser paga.
+
+
+            Se a data de vencimento cair em um fim de semana ou feriado, ela
+            deve ser prorrogada automaticamente para o próximo dia útil, e todos
+            os campos que dependem dessa data (como desconto, juros e multa)
+            também devem considerar essa prorrogação.
+
+
+            Ou seja, a contagem da validade após o vencimento começa a partir da
+            data ajustada, quando aplicável, e determina até quando o pagamento
+            será aceito.
+          default: 30
+    CobExpiracao:
+      type: object
+      title: cob-expiração
+      properties:
+        expiracao:
+          type: integer
+          title: expiracao
+          format: int32
+          description: |-
+            Tempo de vida da cobrança, especificado em segundos a partir
+            da data de criação.
+          default: "86400"
+          examples:
+            - "3600"
+    CobGerada:
+      type: object
+      title: cob-gerada
+      description: Dados criados ou alterados da cobrança imediata via API Pix
+      required:
+        - chave
+        - txid
+        - calendario
+        - revisao
+        - valor
+      allOf:
+        - type: object
+          properties:
+            calendario:
+              required: true
+              title: calendario
+              description: Os campos aninhados sob o identificador calendário organizam
+                informações a respeito de controle de tempo da cobrança.
+              allOf:
+                - $ref: "#/components/schemas/CobCriacao"
+                - $ref: "#/components/schemas/CobExpiracao"
+            txid:
+              $ref: "#/components/schemas/txid"
+            revisao:
+              $ref: "#/components/schemas/revisao"
+        - type: object
+          properties:
+            devedor:
+              description: Os campos do devedor são opcionais e identificam quem recebe a
+                cobrança, não quem paga. CPF e CNPJ não podem ser preenchidos
+                juntos. Se o nome do devedor estiver preenchido, CPF ou CNPJ
+                também devem estar.
+              oneOf:
+                - $ref: "#/components/schemas/PessoaFisica"
+                - $ref: "#/components/schemas/PessoaJuridica"
+        - type: object
+          properties:
+            location:
+              type: string
+              title: Localização do payload
+              description: Localização do Payload a ser informada na criação da cobrança.
+              maxLength: 77
+              format: uri
+              readOnly: true
+              examples:
+                - pix.example.com/qr/v2/2353c790eefb11eaadc10242ac120002
+        - type: object
+          properties:
+            valor:
+              required:
+                - original
+              schema:
+                $ref: "#/components/schemas/CobValor"
+        - $ref: "#/components/schemas/CobBaseCopiaCola"
+    PayloadLocationCob:
+      type: object
+      title: cob-location-payload
+      required:
+        - id
+        - tipoCob
+      description: Identificador da localização do payload.
+      properties:
+        id:
+          $ref: "#/components/schemas/PayloadLocationId"
+    CobPayload:
+      type: object
+      title: cob-payload
+      description: Dados da cobrança imediata acessados pelo payload JSON
+      required:
+        - txid
+        - calendario
+        - revisao
+        - status
+        - valor
+        - chave
+      allOf:
+        - type: object
+          properties:
+            calendario:
+              required: true
+              title: calendario
+              description: |-
+                Os campos aninhados sob o identificador calendário organizam
+                informações a respeito de controle de tempo da cobrança.
+              allOf:
+                - $ref: "#/components/schemas/CobCriacao"
+                - $ref: "#/components/schemas/CobApresentacao"
+                - $ref: "#/components/schemas/CobExpiracao"
+            txid:
+              $ref: "#/components/schemas/txid"
+            revisao:
+              $ref: "#/components/schemas/revisao"
+        - type: object
+          properties:
+            devedor:
+              description: Os campos do devedor são opcionais e identificam quem recebe a
+                cobrança, não quem paga. CPF e CNPJ não podem ser preenchidos
+                juntos. Se o nome do devedor estiver preenchido, CPF ou CNPJ
+                também devem estar.
+              oneOf:
+                - $ref: "#/components/schemas/PessoaFisica"
+                - $ref: "#/components/schemas/PessoaJuridica"
+        - type: object
+          properties:
+            status:
+              $ref: "#/components/schemas/CobrancaStatus"
+        - type: object
+          properties:
+            valor:
+              $ref: "#/components/schemas/CobPayloadValor"
+        - $ref: "#/components/schemas/CobBase"
+    CobPayloadValor:
+      type: object
+      title: cob-payload-valor
+      required:
+        - original
+      description: 'Todos os campos que indicam valores monetários obedecem ao pattern
+        \d{1,10}\.\d{2}. O separador decimal é o caractere ponto. Não é
+        aplicável utilizar separador de milhar. Exemplos de valores aderentes ao
+        padrão: “1.00”, “123.99”, “123456789.23"'
+      properties:
+        original:
+          type: string
+          pattern: \d{1,10}\.\d{2}
+          description: Valor original da cobrança.
+        modalidadeAlteracao:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 1
+          title: modalidade-de-alteração
+          description: Esse campo indica se o pagador pode alterar o valor da cobrança. Se
+            não for informado, assume-se que não pode (valor 0). Se estiver
+            presente com valor 1, o pagador pode modificar o valor final.
+        retirada:
+          description: >-
+            Trata-se de uma estrutura opcional para recebimento de numerário em
+            cobranças Pix, permitindo apenas saque ou troco, nunca ambos. Quando
+            presente, a cobrança é classificada como Pix Saque ou Pix Troco.
+
+
+            Para ser válida, exige os campos modalidadeAgente e
+            prestadorDoServicoDeSaque. No saque, o valor original deve ser zero;
+            no troco, maior que zero. Em ambos os casos, o valor original não
+            pode ser alterável.
+          type: object
+          oneOf:
+            - type: object
+              properties:
+                saque:
+                  type: object
+                  title: saque
+                  required:
+                    - valor
+                    - modalidadeAgente
+                    - prestadorDoServicoDeSaque
+                  description: Informações relacionadas ao saque
+                  properties:
+                    valor:
+                      title: valor
+                      type: string
+                      pattern: \d{1,10}\.\d{2}
+                      description: Valor do saque efetuado
+                    modalidadeAlteracao:
+                      type: integer
+                      format: int32
+                      minimum: 0
+                      maximum: 1
+                      default: 0
+                      title: modalidade-de-alteração
+                      description: Modalidade de alteração de valor do saque. Quando não preenchido o
+                        valor assumido é o 0 (zero).
+                    modalidadeAgente:
+                      type: string
+                      title: modalidade-do-agente
+                      description: |-
+                        Modalidade do Agente
+
+                        <table><tr><th>SIGLA</th><th>Descrição</th></tr><tr><td>AGTEC</td><td>Agente
+                        Estabelecimento Comercial</td></tr><tr><td>AGTOT</td><td>Agente
+                        Outra Espécie de Pessoa Jurídica ou Correspondente no País</td></tr><tr><td>AGPSS</td><td>Agente
+                        Facilitador de Serviço de Saque</td></tr></table>
+                      enum:
+                        - AGTEC
+                        - AGTOT
+                        - AGPSS
+                    prestadorDoServicoDeSaque:
+                      type: string
+                      title: prestador-de-serviços
+                      pattern: \d{8}
+                      description: ISPB do Facilitador de Serviço de Saque
+            - type: object
+              properties:
+                troco:
+                  type: object
+                  title: Troco
+                  required:
+                    - valor
+                    - modalidadeAgente
+                    - prestadorDoServicoDeSaque
+                  description: Informações relacionadas ao troco
+                  properties:
+                    valor:
+                      type: string
+                      title: valor
+                      pattern: \d{1,10}\.\d{2}
+                      description: Valor do troco efetuado
+                    modalidadeAlteracao:
+                      type: integer
+                      format: int32
+                      minimum: 0
+                      maximum: 1
+                      default: 0
+                      title: modalidade-de-alteração
+                      description: Modalidade de alteração de valor do troco. Quando não preenchido o
+                        valor assumido é o 0 (zero).
+                    modalidadeAgente:
+                      type: string
+                      title: modalidade-do-agente
+                      description: |-
+                        Modalidade do Agente
+
+                        <table><tr><th>SIGLA</th><th>Descrição</th></tr><tr><td>AGTEC</td><td>Agente
+                        Estabelecimento Comercial</td></tr><tr><td>AGTOT</td><td>Agente
+                        Outra Espécie de Pessoa Jurídica ou Correspondente no País</td></tr></table>
+                      enum:
+                        - AGTEC
+                        - AGTOT
+                    prestadorDoServicoDeSaque:
+                      type: string
+                      title: prestador-de-serviços
+                      pattern: \d{8}
+                      description: ISPB do Facilitador de Serviço de Saque
+    ParametrosConsultaCob:
+      type: object
+      title: cob-parametros-consulta
+      description: Parâmetros para a realização de uma consulta de cobranças.
+      required:
+        - inicio
+        - fim
+        - paginacao
+      properties:
+        inicio:
+          type: string
+          format: date-time
+          title: data-de-início
+          description: Data inicial utilizada na consulta.
+          examples:
+            - 2025-04-01T00:00:00Z
+        fim:
+          type: string
+          format: date-time
+          title: data-de-fim
+          description: Data de fim utilizada na consulta.
+          examples:
+            - 2025-04-01T17:00:00Z
+        cpf:
+          type: string
+          title: CPF
+          pattern: /^\d{11}$/
+          description: Filtro pelo CPF do devedor. Não pode ser utilizado ao mesmo tempo
+            que o CNPJ.
+        cnpj:
+          type: string
+          title: CNPJ
+          pattern: /^\d{14}$/
+          description: Filtro pelo CNPJ do devedor. Não pode ser utilizado ao mesmo tempo
+            que o CPF.
+        locationPresente:
+          title: location-presente
+          type: boolean
+          description: Filtro pela existência de location vinculada.
+        status:
+          type: string
+          title: status
+          description: Filtro pelo status das cobranças.
+        paginacao:
+          $ref: "#/components/schemas/paginacao"
+    CobRevisada:
+      type: object
+      title: cob-revisada
+      description: Dados enviados para revisão da cobrança imediata via API Pix
+      allOf:
+        - type: object
+          properties:
+            calendario:
+              required: true
+              title: calendario
+              description: Os campos aninhados sob o identificador calendário organizam
+                informações a respeito de controle de tempo da cobrança.
+              allOf:
+                - $ref: "#/components/schemas/CobExpiracao"
+        - type: object
+          properties:
+            devedor:
+              description: Os campos do devedor são opcionais e identificam quem recebe a
+                cobrança, não quem paga. CPF e CNPJ não podem ser preenchidos
+                juntos. Se o nome do devedor estiver preenchido, CPF ou CNPJ
+                também devem estar.
+              oneOf:
+                - $ref: "#/components/schemas/PessoaFisica"
+                - $ref: "#/components/schemas/PessoaJuridica"
+        - type: object
+          properties:
+            loc:
+              allOf:
+                - $ref: "#/components/schemas/PayloadLocationCob"
+        - type: object
+          properties:
+            status:
+              type: string
+              title: Status do registro da cobrança
+              enum:
+                - REMOVIDA_PELO_USUARIO_RECEBEDOR
+        - type: object
+          properties:
+            valor:
+              $ref: "#/components/schemas/CobValor"
+        - $ref: "#/components/schemas/CobBase"
+    CobSolicitada:
+      type: object
+      title: cob-solicitada
+      description: Dados enviados para criação ou alteração da cobrança imediata via API Pix
+      required:
+        - valor
+        - chave
+        - calendario
+      allOf:
+        - type: object
+          properties:
+            calendario:
+              required: true
+              title: calendario
+              description: Os campos aninhados sob o identificador calendário organizam
+                informações a respeito de controle de tempo da cobrança.
+              allOf:
+                - required:
+                    - original
+                - $ref: "#/components/schemas/CobExpiracao"
+        - type: object
+          properties:
+            devedor:
+              description: Os campos do devedor são opcionais e identificam quem recebe a
+                cobrança, não quem paga. CPF e CNPJ não podem ser preenchidos
+                juntos. Se o nome do devedor estiver preenchido, CPF ou CNPJ
+                também devem estar.
+              oneOf:
+                - $ref: "#/components/schemas/PessoaFisica"
+                - $ref: "#/components/schemas/PessoaJuridica"
+        - type: object
+          properties:
+            loc:
+              allOf:
+                - $ref: "#/components/schemas/PayloadLocationCob"
+        - type: object
+          properties:
+            valor:
+              required: true
+              allOf:
+                - $ref: "#/components/schemas/CobValor"
+        - $ref: "#/components/schemas/CobBase"
+    CobValor:
+      required: true
+      type: object
+      title: cob-valor
+      properties:
+        original:
+          type: string
+          title: Valor
+          pattern: \d{1,10}\.\d{2}
+          description: Valor original da cobrança.
+        modalidadeAlteracao:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 1
+          description: >-
+            Esse campo indica se o pagador pode alterar o valor da cobrança.
+
+            Se não for informado, assume-se que não pode alterar (valor 0).
+
+            Se for informado com valor 1, o pagador pode ajustar o valor final
+            do pagamento.
+        retirada:
+          description: >-
+            O campo retirada é opcional e permite configurar um Pix como Saque
+            ou Troco, mas apenas um deles pode ser usado por vez. Quando
+            presente, a cobrança deixa de ser considerada Pix comum.
+
+            Para ser válido, é obrigatório informar modalidadeAgente e
+            prestadorDoServicoDeSaque. No Pix Saque, o valor original deve ser
+            0.00, no Pix Troco, deve ser maior que 0.00.
+
+            Em ambos os casos, não é permitido que o pagador altere o valor
+            original da cobrança.
+          type: object
+          oneOf:
+            - type: object
+              properties:
+                saque:
+                  type: object
+                  title: saque
+                  required:
+                    - valor
+                    - modalidadeAgente
+                    - prestadorDoServicoDeSaque
+                  description: Informações relacionadas ao saque
+                  properties:
+                    valor:
+                      type: string
+                      title: valor
+                      pattern: \d{1,10}\.\d{2}
+                      description: Valor do saque efetuado
+                    modalidadeAlteracao:
+                      type: integer
+                      title: modalidade-alteracao
+                      format: int32
+                      minimum: 0
+                      maximum: 1
+                      default: 0
+                      description: Modalidade de alteração de valor do saque. Quando não preenchido o
+                        valor assumido é o 0 (zero).
+                    modalidadeAgente:
+                      type: string
+                      title: modalidade-agente
+                      description: |-
+                        Modalidade do Agente
+
+                        <table><tr><th>SIGLA</th><th>Descrição</th></tr><tr><td>AGTEC</td><td>Agente
+                        Estabelecimento Comercial</td></tr><tr><td>AGTOT</td><td>Agente
+                        Outra Espécie de Pessoa Jurídica ou Correspondente no País</td></tr><tr><td>AGPSS</td><td>Agente
+                        Facilitador de Serviço de Saque</td></tr></table>
+                      enum:
+                        - AGTEC
+                        - AGTOT
+                        - AGPSS
+                    prestadorDoServicoDeSaque:
+                      type: string
+                      title: prestador-de-serviços
+                      pattern: \d{8}
+                      description: ISPB do Facilitador de Serviço de Saque
+            - type: object
+              properties:
+                troco:
+                  type: object
+                  title: Troco
+                  required:
+                    - valor
+                    - modalidadeAgente
+                    - prestadorDoServicoDeSaque
+                  description: Informações relacionadas ao troco
+                  properties:
+                    valor:
+                      type: string
+                      title: valor
+                      pattern: \d{1,10}\.\d{2}
+                      description: Valor do troco efetuado
+                    modalidadeAlteracao:
+                      type: integer
+                      title: modalidade-alteracao
+                      format: int32
+                      minimum: 0
+                      maximum: 1
+                      default: 0
+                      description: Modalidade de alteração de valor do troco. Quando não preenchido o
+                        valor assumido é o 0 (zero).
+                    modalidadeAgente:
+                      type: string
+                      title: modalidade-agente
+                      description: |-
+                        Modalidade do Agente
+
+                        <table><tr><th>SIGLA</th><th>Descrição</th></tr><tr><td>AGTEC</td><td>Agente
+                        Estabelecimento Comercial</td></tr><tr><td>AGTOT</td><td>Agente
+                        Outra Espécie de Pessoa Jurídica ou Correspondente no País</td></tr></table>
+
+                        '
+                      enum:
+                        - AGTEC
+                        - AGTOT
+                    prestadorDoServicoDeSaque:
+                      type: string
+                      title: prestador-de-serviços
+                      pattern: \d{8}
+                      description: ISPB do Facilitador de Serviço de Saque
+    CobrancaStatus:
+      type: string
+      title: cobranca-status
+      description: >-
+        O status do registro da cobrança indica sua situação, e não se refere ao
+        vencimento ou expiração da cobrança. Os possíveis status são:
+
+
+        ATIVA: cobrança criada, ainda não paga nem removida.
+
+
+        CONCLUIDA: cobrança paga, não aceita novo pagamento.
+
+
+        REMOVIDO_PELO_USUARIO_RECEBEDOR: removida pelo recebedor.
+
+
+        REMOVIDO_PELO_PSP: removida pelo PSP recebedor.
+      enum:
+        - ATIVA
+        - CONCLUIDA
+        - REMOVIDA_PELO_USUARIO_RECEBEDOR
+        - REMOVIDA_PELO_PSP
+    CobsVConsultadas:
+      type: object
+      title: cobsv-consultadas
+      required:
+        - parametros
+        - cobs
+      properties:
+        parametros:
+          $ref: "#/components/schemas/ParametrosConsultaCob"
+        cobs:
+          type: array
+          title: Lista de cobranças
+          items:
+            allOf:
+              - $ref: "#/components/schemas/CobVCompleta"
+              - required:
+                  - status
+                  - txid
+                  - idCob
+    CobsConsultadas:
+      type: object
+      title: cobs-consultadas
+      required:
+        - parametros
+        - cobs
+      properties:
+        parametros:
+          $ref: "#/components/schemas/ParametrosConsultaCob"
+        cobs:
+          type: array
+          title: Lista de cobranças
+          items:
+            allOf:
+              - $ref: "#/components/schemas/CobCompleta"
+              - required:
+                  - status
+                  - txid
+                  - idCob
+    CobVCompleta:
+      title: cobv-completo
+      required:
+        - status
+      allOf:
+        - $ref: "#/components/schemas/CobVSolicitada"
+        - $ref: "#/components/schemas/CobVGerada"
+        - type: object
+          properties:
+            pix:
+              type: array
+              title: Pix recebidos
+              items:
+                allOf:
+                  - $ref: "#/components/schemas/Pix"
+                  - type: object
+                    properties:
+                      txid:
+                        allOf:
+                          - $ref: "#/components/schemas/txid"
+                          - pattern: "[a-zA-Z0-9]{26,35}"
+        - type: object
+          properties:
+            status:
+              $ref: "#/components/schemas/CobrancaStatus"
+    CobVGerada:
+      type: object
+      title: cobv-gerada
+      description: Dados criados ou alterados da cobrança com vencimento via API Pix
+      required:
+        - txid
+        - devedor
+        - calendario
+        - revisao
+        - valor
+        - chave
+        - recebedor
+      allOf:
+        - type: object
+          properties:
+            calendario:
+              required:
+                - validadeAposVencimento
+              title: calendario
+              description: Os campos aninhados sob o identificador calendário organizam
+                informações a respeito de controle de tempo da cobrança.
+              allOf:
+                - $ref: "#/components/schemas/CobCriacao"
+                - $ref: "#/components/schemas/CobDataDeVencimento"
+            txid:
+              $ref: "#/components/schemas/txid"
+            revisao:
+              $ref: "#/components/schemas/revisao"
+        - $ref: "#/components/schemas/DadosDevedor"
+        - $ref: "#/components/schemas/DadosRecebedor"
+        - type: object
+          properties:
+            valor:
+              required:
+                - original
+              allOf:
+                - $ref: "#/components/schemas/CobVValor"
+        - $ref: "#/components/schemas/CobBaseCopiaCola"
+    CobVPayload:
+      type: object
+      title: cobv-payload
+      description: Dados da cobrança com vencimento acessados pelo payload JSON
+      required:
+        - txid
+        - calendario
+        - revisao
+        - status
+        - valor
+        - chave
+        - devedor
+        - recebedor
+      allOf:
+        - type: object
+          properties:
+            calendario:
+              title: calendario
+              description: Os campos aninhados sob o identificador calendário organizam
+                informações a respeito de controle de tempo da cobrança.
+              required:
+                - criacao
+                - apresentacao
+                - validadeAposVencimento
+              allOf:
+                - $ref: "#/components/schemas/CobCriacao"
+                - $ref: "#/components/schemas/CobApresentacao"
+                - $ref: "#/components/schemas/CobDataDeVencimento"
+        - type: object
+          properties:
+            devedor:
+              description: Os campos do devedor são opcionais e identificam quem recebe a
+                cobrança, não quem paga. CPF e CNPJ não podem ser preenchidos
+                juntos. Se o nome do devedor estiver preenchido, CPF ou CNPJ
+                também devem estar.
+              oneOf:
+                - $ref: "#/components/schemas/PessoaFisica"
+                - $ref: "#/components/schemas/PessoaJuridica"
+        - $ref: "#/components/schemas/DadosRecebedor"
+        - type: object
+          properties:
+            txid:
+              $ref: "#/components/schemas/txid"
+            revisao:
+              $ref: "#/components/schemas/revisao"
+        - type: object
+          properties:
+            status:
+              $ref: "#/components/schemas/CobrancaStatus"
+        - type: object
+          properties:
+            valor:
+              $ref: "#/components/schemas/CobVPayloadValor"
+        - $ref: "#/components/schemas/CobBase"
+    CobVPayloadValor:
+      type: object
+      title: cobv-payload-valor
+      required:
+        - final
+      description: >-
+        Todos os campos que indicam valores monetários obedecem ao pattern
+
+        \d{1,10}\.\d{2}. O separador decimal é o caractere ponto. Não é
+        aplicável
+
+        utilizar separador de milhar. Exemplos de valores aderentes ao padrão:
+        “1.00”,
+
+        “123.99”, “123456789.23
+      properties:
+        original:
+          type: string
+          title: valor-original
+          pattern: \d{1,10}\.\d{2}
+          description: Valor original da cobrança.
+        multa:
+          title: multa
+          description: Multa aplicada à cobrança
+          type: string
+          pattern: \d{1,10}\.\d{2}
+        juros:
+          title: juros
+          description: Juro aplicado à cobrança
+          type: string
+          pattern: \d{1,10}\.\d{2}
+        abatimento:
+          title: abatimento
+          description: Abatimento aplicado à cobrança
+          type: string
+          pattern: \d{1,10}\.\d{2}
+        desconto:
+          title: desconto
+          description: Descontos aplicados à cobrança
+          type: string
+          pattern: \d{1,10}\.\d{2}
+        final:
+          type: string
+          title: final
+          pattern: \d{1,10}\.\d{2}
+          description: Valor final da cobrança.
+    CobVRevisada:
+      type: object
+      title: cobv-revisada
+      description: Dados enviados para revisão da cobrança com vencimento via API Pix
+      allOf:
+        - type: object
+          properties:
+            calendario:
+              title: Calendário
+              description: Os campos aninhados sob o identificador calendário organizam
+                informações a respeito de controle de tempo da cobrança.
+              allOf:
+                - $ref: "#/components/schemas/CobDataDeVencimento"
+        - $ref: "#/components/schemas/DadosDevedor"
+        - type: object
+          properties:
+            loc:
+              allOf:
+                - $ref: "#/components/schemas/PayloadLocationCob"
+        - type: object
+          properties:
+            status:
+              type: string
+              title: Status do registro da cobrança
+              enum:
+                - REMOVIDA_PELO_USUARIO_RECEBEDOR
+        - type: object
+          properties:
+            valor:
+              $ref: "#/components/schemas/CobVValor"
+        - $ref: "#/components/schemas/CobBase"
+    CobVSolicitada:
+      type: object
+      title: Cobrança com vencimento solicitada
+      description: Dados enviados para criação ou alteração da cobrança com vencimento
+        via API Pix
+      required:
+        - valor
+        - chave
+        - devedor
+        - calendario
+      allOf:
+        - type: object
+          properties:
+            calendario:
+              title: Calendário
+              description: Os campos aninhados sob o identificador calendário organizam
+                informações a respeito de controle de tempo da cobrança.
+              allOf:
+                - $ref: "#/components/schemas/CobDataDeVencimento"
+        - $ref: "#/components/schemas/DadosDevedor"
+        - type: object
+          properties:
+            loc:
+              allOf:
+                - $ref: "#/components/schemas/PayloadLocationCob"
+        - type: object
+          properties:
+            valor:
+              allOf:
+                - required:
+                    - original
+                - $ref: "#/components/schemas/CobVValor"
+        - $ref: "#/components/schemas/CobBase"
+    CobVValor:
+      type: object
+      title: cobv-valor
+      properties:
+        original:
+          type: string
+          title: Valor
+          pattern: \d{1,10}\.\d{2}
+          description: Valor original da cobrança.
+        multa:
+          type: object
+          required:
+            - modalidade
+            - valorPerc
+          title: multa
+          description: Multa aplicada à cobrança
+          properties:
+            modalidade:
+              type: integer
+              format: int32
+              minimum: 1
+              maximum: 2
+              description: |-
+                Modalidade da multa, conforme tabela de domínios.
+
+                <table><tr><th>Descrição</th><th>Domínio</th></tr><tr><td>Valor Fixo</td><td>1</td></tr><tr><td>Percentual</td><td>2</td></tr></table>
+            valorPerc:
+              type: string
+              description: Multa do documento em valor absoluto ou percentual.
+              pattern: \d{1,10}\.\d{2}
+        juros:
+          type: object
+          required:
+            - modalidade
+            - valorPerc
+          description: Juro aplicado à cobrança
+          properties:
+            modalidade:
+              type: integer
+              format: int32
+              minimum: 1
+              maximum: 8
+              description: >-
+                Modalidade de juros, conforme tabela de domínios.
+
+
+                <table><tr><th>Descrição</th><th>Domínio</th></tr><tr><td>Valor
+                (dias
+
+                corridos)</td><td>1</td></tr><tr><td>Percentual ao dia (dias
+                corridos)</td><td>2</td></tr><tr><td>Percentual
+
+                ao mês (dias corridos)</td><td>3</td></tr><tr><td>Percentual ao
+                ano
+
+                (dias corridos)</td><td>4</td></tr><tr><td>Valor (dias
+                úteis)</td><td>5</td></tr><tr><td>Percentual
+
+                ao dia (dias úteis)</td><td>6</td></tr><tr><td>Percentual ao mês
+                (dias
+
+                úteis)</td><td>7</td></tr><tr><td>Percentual ao ano (dias
+                úteis)</td><td>8</td></tr></table>
+            valorPerc:
+              type: string
+              title: Valor
+              description: Juros do documento em valor absoluto ou percentual.
+              pattern: \d{1,10}\.\d{2}
+        abatimento:
+          type: object
+          required:
+            - modalidade
+            - valorPerc
+          description: Abatimento aplicado à cobrança
+          properties:
+            modalidade:
+              type: integer
+              format: int32
+              minimum: 1
+              maximum: 2
+              description: |-
+                Modalidade de abatimentos, conforme tabela de domínios.
+
+                <table><tr><th>Descrição</th><th>Domínio</th></tr><tr><td>Valor Fixo</td><td>1</td></tr><tr><td>Percentual</td><td>2</td></tr></table>
+            valorPerc:
+              type: string
+              title: valorPerc
+              description: |-
+                Abatimentos ou outras deduções aplicadas ao documento,
+                em valor absoluto ou percentual do valor original do documento.
+              pattern: \d{1,10}\.\d{2}
+        desconto:
+          title: Descontos aplicados
+          required:
+            - modalidade
+          allOf:
+            - type: object
+              properties:
+                modalidade:
+                  type: integer
+                  format: int32
+                  minimum: 1
+                  maximum: 6
+                  description: |-
+                    Modalidade de desconto, conforme tabela de domínios.
+
+                    <table><tr><th>Descrição</th><th>Domínio</th></tr><tr><td>Valor
+                    Fixo até a[s] data[s] informada[s]</td><td>1</td></tr><tr><td>Percentual
+                    até a data informada</td><td>2</td></tr><tr><td>Valor por antecipação
+                    dia corrido</td><td>3</td></tr><tr><td>Valor por antecipação dia
+                    útil</td><td>4</td></tr><tr><td>Percentual por antecipação dia corrido</td><td>5</td></tr><tr><td>Percentual
+                    por antecipação dia útil</td><td>6</td></tr></table>
+          oneOf:
+            - type: object
+              properties:
+                descontoDataFixa:
+                  description: Descontos absolutos aplicados à cobrança.
+                  type: array
+                  minItems: 1
+                  maxItems: 3
+                  uniqueItems: true
+                  items:
+                    required:
+                      - data
+                      - valorPerc
+                    allOf:
+                      - properties:
+                          data:
+                            title: data-limite
+                            description: Permite oferecer até três descontos com data fixa para pagamento
+                              antecipado. Cada desconto é definido por uma data
+                              limite e um valor (fixo ou percentual). A data do
+                              desconto deve sempre ser anterior à data de
+                              vencimento da cobrança.
+                            type: string
+                            format: date
+                            examples:
+                              - 2025-06-01
+                      - properties:
+                          valorPerc:
+                            type: string
+                            title: Valor do desconto absoluto
+                            description: Desconto em valor absoluto ou percentual por dia, útil ou corrido.
+                            pattern: \d{1,10}\.\d{2}
+            - type: object
+              required:
+                - valorPerc
+              properties:
+                valorPerc:
+                  type: string
+                  title: Abatimentos
+                  description: Abatimentos ou outras deduções aplicadas ao documento, em valor
+                    absoluto ou percentual do valor original do documento.
+                  pattern: \d{1,10}\.\d{2}
+    DadosDevedor:
+      type: object
+      title: dados-devedor
+      properties:
+        devedor:
+          description: O objeto devedor organiza as informações sobre o devedor da cobrança.
+          oneOf:
+            - $ref: "#/components/schemas/PessoaFisica"
+            - $ref: "#/components/schemas/PessoaJuridica"
+          allOf:
+            - type: object
+              properties:
+                email:
+                  type: string
+                  title: Email
+                  description: Email do usuário.
+            - $ref: "#/components/schemas/DadosComplementaresPessoa"
+    DadosRecebedor:
+      type: object
+      title: dados-recebedor
+      required:
+        - logradouro
+        - cidade
+        - uf
+        - cep
+      properties:
+        recebedor:
+          description: O objeto recebedor organiza as informações sobre o credor da
+            cobrança.
+          oneOf:
+            - $ref: "#/components/schemas/PessoaFisica"
+            - type: object
+              allOf:
+                - $ref: "#/components/schemas/PessoaJuridica"
+                - type: object
+                  properties:
+                    nomeFantasia:
+                      type: string
+                      title: Nome fantasia
+                      description: Nome fantasia.
+                      maxLength: 200
+          allOf:
+            - required:
+                - logradouro
+                - cidade
+                - uf
+                - cep
+            - $ref: "#/components/schemas/DadosComplementaresPessoa"
+    Fim:
+      type: string
+      format: date-time
+      title: data-de-fim
+      description: Filtra os registros cuja data de criação seja menor ou igual que a
+        data de fim.
+    Inicio:
+      type: string
+      format: date-time
+      title: data-de-início
+      description: Filtra os registros cuja data de criação seja maior ou igual que a
+        data de início.
+    PessoaFisica:
+      type: object
+      required:
+        - cpf
+        - nome
+      title: devedor-pf
+      properties:
+        cpf:
+          type: string
+          title: CPF
+          pattern: /^\d{11}$/
+          description: CPF do usuário.
+        nome:
+          type: string
+          title: Nome
+          description: Nome do usuário.
+          maxLength: 200
+    PessoaJuridica:
+      type: object
+      required:
+        - cnpj
+        - nome
+      title: devedor-pj
+      properties:
+        cnpj:
+          type: string
+          title: CNPJ
+          pattern: /^\d{14}$/
+          description: CNPJ do usuário.
+        nome:
+          type: string
+          title: Nome
+          description: Nome do usuário.
+          maxLength: 200
+    Devolucao:
+      type: object
+      title: devolução
+      required:
+        - id
+        - rtrId
+        - valor
+        - horario
+        - status
+      properties:
+        id:
+          $ref: "#/components/schemas/DevolucaoId"
+        rtrId:
+          type: string
+          title: returnId
+          description: returnId que transita na PACS004.
+          pattern: "[a-zA-Z0-9]{32}"
+          minLength: 32
+          maxLength: 32
+          examples:
+            - D12345678202009091000abcde123456
+        valor:
+          type: string
+          title: Valor a devolver.
+          pattern: \d{1,10}\.\d{2}
+          description: Valor a devolver.
+        natureza:
+          $ref: "#/components/schemas/DevolucaoNatureza"
+        descricao:
+          type: string
+          title: Mensagem ao pagador relativa à devolução.
+          maxLength: 140
+          description: O campo descrição é opcional e exibe um texto ao pagador com
+            informações sobre a devolução.
+        horario:
+          type: object
+          properties:
+            solicitacao:
+              type: string
+              format: date-time
+              title: Horário de solicitação
+              description: Horário no qual a devolução foi solicitada.
+            liquidacao:
+              type: string
+              format: date-time
+              title: Horário de liquidacao
+              description: Horário no qual a devolução foi liquidada.
+        status:
+          type: string
+          title: Status
+          description: Status da devolução.
+          enum:
+            - EM_PROCESSAMENTO
+            - DEVOLVIDO
+            - NAO_REALIZADO
+        motivo:
+          type: string
+          title: motivo
+          description: >-
+            Status da Devolução
+
+
+            Campo utilizado pelo recebedor para detalhar os motivos da devolução
+            ter atingido o status em questão.
+
+
+            Pode ser utilizado, por exemplo, para detalhar o motivo de a
+            devolução não ter sido realizada.
+          maxLength: 140
+    DevolucaoSolicitada:
+      title: devolução-solicitada
+      type: object
+      required:
+        - valor
+      properties:
+        valor:
+          type: string
+          title: Valor
+          pattern: \d{1,10}\.\d{2}
+          description: Valor solicitado para devolução. A soma dos valores de todas as
+            devolucões não podem ultrapassar o valor total do Pix.
+        natureza:
+          $ref: "#/components/schemas/DevolucaoSolicitadaNatureza"
+        descricao:
+          type: string
+          title: Mensagem ao pagador relativa à devolução.
+          description: O campo `descricao`, opcional, determina um texto a ser apresentado
+            ao pagador contendo informações sobre a devolução. Esse texto será
+            preenchido, na pacs.004, pelo PSP do recebedor, no campo
+            RemittanceInformation. O tamanho do campo na pacs.004 está limitado
+            a 140 caracteres.
+          maxLength: 140
+    DadosComplementaresPessoa:
+      type: object
+      title: endereço
+      properties:
+        logradouro:
+          type: string
+          title: Logradouro
+          description: Logradouro do usuário.
+          maxLength: 200
+        cidade:
+          type: string
+          title: Cidade
+          description: Cidade do usuário.
+          maxLength: 200
+        uf:
+          type: string
+          title: UF
+          description: UF do usuário.
+          maxLength: 2
+        cep:
+          type: string
+          title: CEP
+          description: CEP do usuário.
+          maxLength: 8
+    EndToEndId:
+      type: string
+      title: e2eid
+      description: EndToEndId que transita na PACS002, PACS004 e PACS008
+      pattern: "[a-zA-Z0-9]{32}"
+      minLength: 32
+      maxLength: 32
+    id:
+      type: string
+      title: id
+      description: Id gerado pelo cliente para representar unicamente uma devolução.
+      pattern: "[a-zA-Z0-9]{1,35}"
+    LoteCobVConsultado:
+      title: lote-cobv-consultado
+      type: object
+      required:
+        - id
+        - descricao
+        - criacao
+        - cobsv
+      properties:
+        id:
+          type: integer
+          format: int64
+          title: Id do lote
+        descricao:
+          type: string
+          title: Descrição do lote
+        criacao:
+          type: string
+          format: date-time
+          title: Data de criação do lote
+          description: Timestamp que indica o momento em que foi criado o lote.
+        cobsv:
+          type: array
+          items:
+            type: object
+            required:
+              - txid
+              - status
+            properties:
+              txid:
+                $ref: "#/components/schemas/txid"
+              status:
+                type: string
+                title: Status da solicitação de criação/alteração da cobrança no contexto de
+                  criação via lote
+                enum:
+                  - EM_PROCESSAMENTO
+                  - CRIADA
+                  - NEGADA
+              problema:
+                $ref: "#/components/schemas/Problema"
+              criacao:
+                type: string
+                format: date-time
+                title: Data de Criação
+                description: Data e hora em que a cobrança foi criada.
+                readOnly: true
+    LoteCobVGerado:
+      title: lote-cobv-gerado
+      type: object
+      required:
+        - id
+        - descricao
+        - criacao
+        - cobsv
+      properties:
+        id:
+          type: integer
+          format: int64
+          title: Id do lote
+        descricao:
+          type: string
+          title: Descrição do lote
+        criacao:
+          type: string
+          format: date-time
+          title: Data de criação do lote
+          description: Timestamp que indica o momento em que foi criado o lote.
+        cobsv:
+          type: array
+          items:
+            $ref: "#/components/schemas/CobVGerada"
+    ParametrosConsultaLote:
+      type: object
+      title: lote-cobv-parametros-consulta
+      description: Parâmetros utilizados para a realização de uma consulta de lote de
+        cobranças com vencimento.
+      required:
+        - inicio
+        - fim
+        - paginacao
+      properties:
+        inicio:
+          type: string
+          format: date-time
+          title: Data de Início
+          description: Data inicial utilizada na consulta.
+          examples:
+            - 2025-04-01T00:00:00Z
+        fim:
+          type: string
+          format: date-time
+          title: Data de Fim
+          description: Data de fim utilizada na consulta.
+          examples:
+            - 2025-04-01T17:00:00Z
+        paginacao:
+          $ref: "#/components/schemas/paginacao"
+    LotesCobVConsultados:
+      title: lotes-cobv-consultados
+      type: object
+      required:
+        - parametros
+        - lotes
+      properties:
+        parametros:
+          $ref: "#/components/schemas/ParametrosConsultaLote"
+        lotes:
+          type: array
+          title: Lotes de solicitações de criação/alteração de cobranças com vencimento
+          items:
+            allOf:
+              - $ref: "#/components/schemas/LoteCobVConsultado"
+    PayloadLocationConsultadas:
+      type: object
+      title: location-consultadas
+      required:
+        - parametros
+        - loc
+      properties:
+        parametros:
+          $ref: "#/components/schemas/ParametrosConsultaPayloadLocation"
+        loc:
+          type: array
+          title: Lista de locations cadastradas
+          items:
+            allOf:
+              - $ref: "#/components/schemas/PayloadLocationCompleta"
+    PayloadLocationId:
+      type: integer
+      required: false
+      format: int64
+      title: location-id
+      description: Identificador da location a ser informada na criação da cobrança.
+      readOnly: true
+    PayloadLocation:
+      type: object
+      title: location-payload
+      description: Identificador da localização do payload.
+      required:
+        - id
+        - location
+        - tipoCob
+        - criacao
+      properties:
+        id:
+          $ref: "#/components/schemas/PayloadLocationId"
+        location:
+          type: string
+          title: Localização do payload
+          description: Localização do Payload a ser informada na criação da cobrança.
+          maxLength: 77
+          format: uri
+          readOnly: true
+          examples:
+            - pix.example.com/qr/v2/2353c790eefb11eaadc10242ac120002
+        tipoCob:
+          type: string
+          title: Tipo da cobrança
+          enum:
+            - cob
+            - cobv
+        criacao:
+          type: string
+          format: date-time
+          title: Data de Criação
+          description: Data e hora em que a location foi criada.
+          readOnly: true
+    PayloadLocationCompleta:
+      type: object
+      title: location-payload-completa
+      description: Identificador da localização do payload completo.
+      required:
+        - id
+        - location
+        - tipoCob
+        - criacao
+      properties:
+        id:
+          $ref: "#/components/schemas/PayloadLocationId"
+        txid:
+          $ref: "#/components/schemas/txid"
+        location:
+          type: string
+          title: Localização do payload
+          description: Localização do Payload a ser informada na criação da cobrança.
+          maxLength: 77
+          format: uri
+          readOnly: true
+          examples:
+            - pix.example.com/qr/v2/2353c790eefb11eaadc10242ac120002
+        tipoCob:
+          type: string
+          title: Tipo da cobrança
+          enum:
+            - cob
+            - cobv
+        criacao:
+          type: string
+          format: date-time
+          title: Data de Criação
+          description: Data e hora em que a location foi criada.
+          readOnly: true
+    PayloadLocationSolicitada:
+      type: object
+      title: location-payload-solicitada
+      description: Identificador da localização do payload solicitada.
+      required:
+        - tipoCob
+      properties:
+        tipoCob:
+          type: string
+          title: Tipo da cobrança
+          enum:
+            - cob
+            - cobv
+    DevolucaoSolicitadaNatureza:
+      type: string
+      title: natureza
+      description: >-
+        A natureza da devolução indica o tipo de Pix ao qual ela se refere. Pode
+        ser:
+
+
+        ORIGINAL: quando o recebedor pede devolução de um Pix comum ou da parte
+        da compra em um Pix Troco.
+
+
+        RETIRADA: quando o recebedor pede devolução de um Pix Saque ou da parte
+        do troco em um Pix Troco.
+
+
+        Se a natureza não for informada, considera-se como ORIGINAL.
+
+
+        Limites de devolução:
+
+
+        Pix comum: pode devolver até o valor total do Pix.
+
+
+        Pix Saque: pode devolver até o valor retirado.
+
+
+        Pix Troco:
+
+
+        Parte da compra → devolução limitada ao valor da compra (ORIGINAL).
+
+
+        Parte do troco → devolução limitada ao valor do troco (RETIRADA).
+      enum:
+        - ORIGINAL
+        - RETIRADA
+    DevolucaoNatureza:
+      type: string
+      title: natureza
+      description: >-
+        A devolução de um Pix pode ter diferentes naturezas, dependendo do tipo
+        de Pix e do motivo da devolução. Existem quatro naturezas possíveis:
+
+
+        ORIGINAL: Quando o recebedor pede a devolução de um Pix comum ou da
+        parte da compra em um Pix Troco.
+
+
+        RETIRADA: Quando o recebedor pede a devolução de um Pix Saque ou da
+        parte do troco em um Pix Troco.
+
+
+        MED_OPERACIONAL: Quando a devolução é feita por falha operacional, no
+        âmbito do Mecanismo Especial de Devolução (MED), em um Pix comum.
+
+
+        MED_FRAUDE: Quando a devolução é feita por suspeita de fraude, também no
+        âmbito do MED, em um Pix comum.
+
+
+        Se a natureza não for informada, assume-se que é ORIGINAL.
+
+
+        Limites de valor:
+
+
+        No Pix comum, o valor devolvido não pode ultrapassar o valor total do
+        Pix.
+
+
+        No Pix Saque, o valor devolvido é no máximo o que foi sacado.
+
+
+        No Pix Troco, o valor devolvido pode ser da compra (natureza ORIGINAL)
+        ou do troco (natureza RETIRADA), e cada parte tem seu limite.
+      enum:
+        - ORIGINAL
+        - RETIRADA
+        - MED_OPERACIONAL
+        - MED_FRAUDE
+    paginacao:
+      type: object
+      title: paginação
+      required:
+        - paginaAtual
+        - itensPorPagina
+        - quantidadeDePaginas
+        - quantidadeTotalDeItens
+      properties:
+        paginaAtual:
+          type: integer
+          title: Página atual
+          description: Número da página recuperada.
+          minimum: 0
+        itensPorPagina:
+          type: integer
+          title: Itens por página
+          description: Quantidade de registros retornado na página.
+          minimum: 1
+        quantidadeDePaginas:
+          type: integer
+          title: Quantidade de páginas
+          description: Quantidade de páginas disponíveis para consulta.
+          minimum: 1
+        quantidadeTotalDeItens:
+          type: integer
+          title: Quantidade total de itens
+          description: Quantidade total de itens disponíveis de acordo com os parâmetros
+            informados.
+          minimum: 0
+    ParametrosConsultaPayloadLocation:
+      type: object
+      title: parametro-consulta-location
+      description: Parâmetros utilizados para a realização de uma consulta de locations.
+      required:
+        - inicio
+        - fim
+        - paginacao
+      properties:
+        inicio:
+          type: string
+          format: date-time
+          title: Data de Início
+          description: Data inicial utilizada na consulta.
+          examples:
+            - 2025-06-01T00:00:00Z
+        fim:
+          type: string
+          format: date-time
+          title: Data de Fim
+          description: Data de fim utilizada na consulta.
+          examples:
+            - 2025-06-02T17:00:00Z
+        txIdPresente:
+          type: boolean
+          description: Filtro pela existência de txid.
+        tipoCob:
+          type: string
+          enum:
+            - cob
+            - cobv
+        paginacao:
+          $ref: "#/components/schemas/paginacao"
+    ParametrosConsultaPix:
+      type: object
+      title: parametro-consulta-pix
+      description: Parâmetros utilizados para a realização de uma consulta de Pix.
+      required:
+        - inicio
+        - fim
+        - paginacao
+      properties:
+        inicio:
+          type: string
+          format: date-time
+          title: Data de Início
+          description: Data inicial utilizada na consulta.
+          examples:
+            - 2025-06-01T00:00:00Z
+        fim:
+          type: string
+          format: date-time
+          title: Data de Fim
+          description: Data de fim utilizada na consulta.
+          examples:
+            - 2025-06-02T17:00:00Z
+        txid:
+          allOf:
+            - $ref: "#/components/schemas/txid"
+            - pattern: "[a-zA-Z0-9]{1,35}"
+        txIdPresente:
+          type: boolean
+          description: Filtro pela existência de txid.
+        devolucaoPresente:
+          type: boolean
+          description: Filtro pela existência de devolução.
+        cpf:
+          type: string
+          pattern: /^\d{11}$/
+          description: CPF
+        cnpj:
+          type: string
+          pattern: /^\d{14}$/
+          description: CNPJ
+        paginacao:
+          $ref: "#/components/schemas/paginacao"
+    ParametrosConsultaWebhooks:
+      type: object
+      title: parametro-consulta-webhooks
+      description: Parâmetros utilizados para a realização de uma consulta de Webhooks.
+      properties:
+        inicio:
+          type: string
+          format: date-time
+          title: Data de Início
+          description: Data inicial utilizada na consulta.
+          examples:
+            - 2025-06-01T00:00:00Z
+        fim:
+          type: string
+          format: date-time
+          title: Data de Fim
+          description: Data de fim utilizada na consulta.
+          examples:
+            - 2025-06-02T17:00:00Z
+        paginacao:
+          $ref: "#/components/schemas/paginacao"
+    Problema:
+      type: object
+      title: problema
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          format: uri
+          description: URI de referência que identifica o tipo de problema. De acordo com
+            a RFC 7807.
+          examples:
+            - https://pix.bcb.gov.br/api/v2/error/NaoEncontrado
+        title:
+          type: string
+          description: Descrição resumida do problema.
+          examples:
+            - Not found
+        status:
+          type: integer
+          description: Código HTTP do status retornado.
+          examples:
+            - 404
+        detail:
+          type: string
+          description: Descrição completa do problema.
+        correlationId:
+          type: string
+          description: Identificador de correlação do problema para fins de suporte
+        violacoes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Violacao"
+    Pix:
+      type: object
+      title: pix
+      required:
+        - endToEndId
+        - valor
+        - horario
+        - pagador
+      properties:
+        endToEndId:
+          $ref: "#/components/schemas/EndToEndId"
+        txid:
+          allOf:
+            - $ref: "#/components/schemas/txid"
+            - pattern: "[a-zA-Z0-9]{1,35}"
+        valor:
+          type: string
+          title: Valor do Pix.
+          pattern: \d{1,10}\.\d{2}
+          description: Valor do Pix.
+        componentesValor:
+          type: object
+          title: Informações sobre o valor do Pix
+          description: >-
+            A estrutura do valor do Pix descreve a composição do valor total,
+            que corresponde à soma dos valores de original, saque e troco,
+            acrescida de multas e juros, e descontados abatimentos e descontos,
+            considerando somente os campos presentes.
+
+            As subestruturas saque e troco são utilizadas exclusivamente para
+            Pix Saque e Pix Troco, respectivamente, enquanto multas, juros,
+            abatimentos e descontos se aplicam apenas a cobranças com
+            vencimento.
+
+            Não é permitido que as subestruturas saque e troco coexistam
+            simultaneamente, e a ordem das subestruturas não tem restrição.
+
+            Para Pix Saque, o valor original pode ser zero ou omitido; para Pix
+            Troco e cobranças com vencimento, o valor original deve estar sempre
+            presente.
+          anyOf:
+            - $ref: "#/components/schemas/PixValorOriginal"
+            - $ref: "#/components/schemas/PixValorSaque"
+            - $ref: "#/components/schemas/PixValorTroco"
+            - $ref: "#/components/schemas/PixValorJuros"
+            - $ref: "#/components/schemas/PixValorMulta"
+            - $ref: "#/components/schemas/PixValorAbatimento"
+            - $ref: "#/components/schemas/PixValorDesconto"
+        chave:
+          required: true
+          type: string
+          title: Chave DICT do recebedor
+          description: "Chave Pix registrada no DICT. Os tipos de chave podem ser:
+            telefone, e-mail, cpf/cnpj ou EVP."
+          maxLength: 77
+        horario:
+          type: string
+          format: date-time
+          title: Horário
+          description: Horário em que o Pix foi processado no PSP.
+        infoPagador:
+          type: string
+          title: Informação livre do pagador
+          maxLength: 140
+        devolucoes:
+          type: array
+          title: Devoluções
+          items:
+            $ref: "#/components/schemas/Devolucao"
+    PixConsultados:
+      type: object
+      title: pix-consultados
+      required:
+        - parametros
+        - cobs
+      properties:
+        parametros:
+          $ref: "#/components/schemas/ParametrosConsultaPix"
+        pix:
+          type: array
+          title: Lista de Pix recebidos
+          items:
+            allOf:
+              - $ref: "#/components/schemas/Pix"
+    PixValorAbatimento:
+      title: pix-valor-abatimento
+      type: object
+      properties:
+        abatimento:
+          type: object
+          required:
+            - valor
+          properties:
+            valor:
+              type: string
+              title: Valor relativo a abatimento.
+              description: Valor do abatimento.
+              pattern: \d{1,10}\.\d{2}
+    PixValorDesconto:
+      title: pix-valor-desconto
+      type: object
+      properties:
+        desconto:
+          type: object
+          required:
+            - valor
+          properties:
+            valor:
+              type: string
+              title: Valor relativo a desconto.
+              description: Valor do desconto.
+              pattern: \d{1,10}\.\d{2}
+    PixValorJuros:
+      title: pix-valor-juros
+      type: object
+      properties:
+        juros:
+          type: object
+          required:
+            - valor
+          properties:
+            valor:
+              type: string
+              title: Valor relativo aos juros.
+              description: Valor dos juros.
+              pattern: \d{1,10}\.\d{2}
+    PixValorMulta:
+      title: pix-valor-multa
+      type: object
+      properties:
+        multa:
+          type: object
+          required:
+            - valor
+          properties:
+            valor:
+              type: string
+              title: Valor relativo a multa.
+              description: Valor da multa.
+              pattern: \d{1,10}\.\d{2}
+    PixValorOriginal:
+      title: pix-valor-original
+      type: object
+      properties:
+        original:
+          type: object
+          required:
+            - valor
+          properties:
+            valor:
+              type: string
+              title: Valor original
+              description: Valor original do Pix.
+              pattern: \d{1,10}\.\d{2}
+    PixValorSaque:
+      type: object
+      title: pix-valor-saque
+      properties:
+        saque:
+          type: object
+          required:
+            - valor
+            - modalidadeAgente
+            - prestadorDoServicoDeSaque
+          properties:
+            valor:
+              type: string
+              title: Valor do Saque Pix
+              description: Valor do Saque Pix.
+              pattern: \d{1,10}\.\d{2}
+            modalidadeAgente:
+              type: string
+              title: modalidade-do-agente
+              description: |-
+                Modalidade do Agente
+
+                <table><tr><th>SIGLA</th><th>Descrição</th></tr><tr><td>AGTEC</td><td>Agente
+                Estabelecimento Comercial</td></tr><tr><td>AGTOT</td><td>Agente Outra
+                Espécie de Pessoa Jurídica ou Correspondente no País</td></tr><tr><td>AGPSS</td><td>Agente
+                Facilitador de Serviço de Saque</td></tr></table>
+              enum:
+                - AGTEC
+                - AGTOT
+                - AGPSS
+            prestadorDoServicoDeSaque:
+              type: string
+              title: Facilitador de Serviço de Saque
+              pattern: \d{8}
+              description: ISPB do Facilitador de Serviço de Saque
+    PixValorTroco:
+      title: pix-valor-troco
+      type: object
+      properties:
+        troco:
+          type: object
+          required:
+            - valor
+            - modalidadeAgente
+            - prestadorDoServicoDeSaque
+          properties:
+            valor:
+              type: string
+              title: Valor do Troco Pix
+              description: Valor do Troco Pix.
+              pattern: \d{1,10}\.\d{2}
+            modalidadeAgente:
+              type: string
+              title: modalidade-do-agente
+              description: |-
+                Modalidade do Agente
+
+                <table><tr><th>SIGLA</th><th>Descrição</th></tr><tr><td>AGTEC</td><td>Agente
+                Estabelecimento Comercial</td></tr><tr><td>AGTOT</td><td>Agente Outra
+                Espécie de Pessoa Jurídica ou Correspondente no País</td></tr></table>
+              enum:
+                - AGTEC
+                - AGTOT
+            prestadorDoServicoDeSaque:
+              type: string
+              title: Facilitador de Serviço de Saque
+              pattern: \d{8}
+              description: ISPB do Facilitador de Serviço de Saque
+    revisao:
+      type: integer
+      format: int32
+      title: revisao
+      description: O campo revisao indica a versão da cobrança, começando em zero e
+        aumentando de 1 a cada modificação. No entanto, alterações no campo loc
+        não incrementam a revisão, pois não são consideradas mudanças na
+        cobrança em si. Apenas os demais campos geram histórico e incrementam a
+        revisão. Alterações em loc não precisam ser historizadas.
+      readOnly: true
+    txid:
+      type: string
+      title: txid
+      description: Identificador da transação. O txid é um identificador único criado
+        pelo usuário recebedor para reconhecer uma cobrança.
+      pattern: "[a-zA-Z0-9]{26,35}"
+      examples:
+        - "{txid}"
+    Violacao:
+      type: object
+      title: violações
+      properties:
+        razao:
+          type: string
+          title: Descrição do erro
+          description: Descrição do erro
+          examples:
+            - Valor da cobrança não pode ser 0.00
+        propriedade:
+          type: string
+          title: Nome da propriedade
+          description: Nome da propriedade
+          examples:
+            - cob.chave
+        valor:
+          type: string
+          title: Valor da propriedade
+          description: Valor da propriedade
+          examples:
+            - 61996671234
+    WebhookCallbacks:
+      type: object
+      title: webhook-callbacks
+      description: >-
+        O callback deve ser acionado sempre que um ou mais Pix
+
+        com o mesmo txid forem recebidos, ou quando uma devolução
+
+        relacionada a esse Pix for concluída (status: DEVOLVIDO ou
+        NAO_REALIZADO),
+
+        desde que a chave Pix esteja vinculada a um webhook,
+
+        funcionando como um aviso quase em tempo real da transação.
+      properties:
+        txid:
+          type: string
+          description: Identificador único da transação.
+        valor:
+          type: string
+          description: Valor do Pix.
+        chave:
+          type: string
+          description: Chave DICT do recebedor.
+        infoPagador:
+          type: string
+          description: Informações adicionais sobre o pagador.
+        devolucoes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Devolucao"
+      examples:
+        - $ref: "#/components/examples/WebhookCallbackExample"
+    WebhookCompleto:
+      type: object
+      required:
+        - webhookUrl
+        - chave
+        - criacao
+      title: webhook-completo
+      properties:
+        webhookUrl:
+          type: string
+          format: uri
+          examples:
+            - https://pix.example.com/api/webhook/
+        chave:
+          type: string
+          title: Chave DICT do recebedor
+          description: |-
+            Chave Pix registrada no DICT.
+            Os tipos de chave podem ser: telefone, e-mail, cpf/cnpj ou EVP.
+          maxLength: 77
+        criacao:
+          type: string
+          format: date-time
+          title: Data de Criação
+          description: Data e hora em que o webhook foi cadastrado.
+          readOnly: true
+    WebhookSolicitado:
+      type: object
+      title: webhook-url
+      required:
+        - webhookUrl
+      properties:
+        webhookUrl:
+          type: string
+          format: uri
+          description: URL para onde as notificações Pix serão enviadas.
+      examples:
+        - webhookUrl: https://minhaempresa.com.br/webhook/pix
+    WebhooksConsultados:
+      type: object
+      title: webhooks-consultados
+      required:
+        - webhooks
+      properties:
+        parametros:
+          $ref: "#/components/schemas/ParametrosConsultaWebhooks"
+        webhooks:
+          type: array
+          title: Lista de Webhooks consultados
+          items:
+            allOf:
+              - $ref: "#/components/schemas/WebhookCompleto"
+  parameters:
+    Authorization:
+      in: header
+      name: Authorization
+      description: Token de acesso para autenticação. Deve ser enviado no formato
+        "Bearer {{your_access_token}}".
+      schema:
+        type: string
+      required: true
+      examples:
+        default:
+          value: Bearer {{your_access_token}}
+    paginaAtual:
+      in: query
+      name: paginacao.paginaAtual
+      required: false
+      schema:
+        type: integer
+        format: int32
+        title: Página atual
+        minimum: 0
+        default: 0
+        description: Página a ser retornada pela consulta. Se não for informada, o PSP
+          assumirá que será 0.
+    itensPorPagina:
+      in: query
+      name: paginacao.itensPorPagina
+      required: false
+      schema:
+        type: integer
+        format: int32
+        title: Itens por Página
+        minimum: 1
+        maximum: 1000
+        default: 100
+        description: Quantidade máxima de registros retornados em cada página. Apenas a
+          última página pode conter uma quantidade menor de registros.
+  responses:
+    RequisicaoInvalida:
+      description: Problemas na requisição.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problema"
+    NaoEncontrado:
+      description: Recurso solicitado não foi encontrado.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problema"
+          examples:
+            exemplo1:
+              $ref: "#/components/examples/NaoEncontradoExample1"
+    AcessoNegado:
+      description: Requisição de participante autenticado que viola alguma regra de
+        autorização.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problema"
+          examples:
+            exemplo1:
+              $ref: "#/components/examples/AcessoNegadoExample1"
+    ServicoIndisponivel:
+      description: Serviço não está disponível no momento. Serviço solicitado pode
+        estar em manutenção ou fora da janela de funcionamento.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problema"
+          examples:
+            exemplo1:
+              $ref: "#/components/examples/ServicoIndisponivelExample1"

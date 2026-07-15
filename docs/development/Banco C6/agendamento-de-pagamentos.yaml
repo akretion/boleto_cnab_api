@@ -1,0 +1,547 @@
+openapi: 3.1.1
+info:
+  title: Agendamento de Pagamentos
+  version: 1.1.0
+  description: |-
+    ## O que esta API permite?
+    Esta API permite a consulta (via DDA) de boletos pendentes de pagamento e o agendamento de pagamentos de boletos bancários e pixes.
+    Através dela você pode consultar os boletos que uma pessoa jurídica tem a pagar e encaminhar lotes de pagamentos que deseja realizar.
+
+    É importante destacar que esta API, por si só, não realiza pagamentos. Ela apenas submete os pagamentos para aprovação subsequente de um usuário com autoridade suficiente dentro do ambiente bancário.
+
+    Em outras palavras, ao utilizar esta API, você poderá cadastrar operações de pagamento, as quais necessitarão obrigatoriamente de uma confirmação por parte de alguém com acesso autorizado para que sejam efetivadas.
+
+    Os boletos que você deseja agendar para pagamento através desta API não precisam ser consultados no DDA. Você pode inclui-los diretamente em uma operação de pagamento.
+
+    Após listar todos os títulos (e transações via PIX) para pagamento, será necessário criar um "Grupo de Pagamentos", para que eles sejam pré-processados pelo banco. Este processamento prévio é essencial para garantir que cada pagamento seja validado individualmente antes de ser submetido à aprovação.
+
+    As verificações realizadas neste pré processamento são:
+
+    | Entrada | Validação                         | Retorno                       |
+    |:-------:|-----------------------------------|-------------------------------|
+    | Boleto  | Integridade da linha digitável    | Dados adicionais do boleto    |
+    |         | Pagamento já realizado            |                               |
+    |         |                                   |                               |
+    | Pix     | Integridade da chave              | Dados adicionais do recebedor |
+    |         | Consulta da chave junto ao DICT   |                               |
+
+    Após o envio do lote para processamento inicial, você receberá um identificador correspondente ao lote enviado (group_id), que poderá ser utilizado para consultar os pagamentos e seus respectivos status.
+
+    Caso você se arrependa de algum pagamento ou note que houve algum equívoco no envio de seus dados, ele pode ser removido do lote.
+
+    Uma vez definido o lote correto, você deve submeter esse lote para aprovação. A partir deste momento não é mais possível a edição do lote via API.
+
+    Dentro do web banking o usuário responsável por aprovar os pagamentos pode selecionar itens de um ou mais lotes e aprovar sua execução.
+
+    <br>
+
+    ________________
+
+    ## **Resumo Técnico da API**
+
+    Operações disponíveis para esta API:
+
+    | Operações                                                                                                                               |
+    |:---------------------------------------------------------------------------------------------------------------------------------------:|
+    | [Enviar um grupo de pagamentos para consulta inicial​](schedule-payments#tag/api-de-agendamento-de-pagamentos/post/decode)            |
+    | [Consultar um DDA do cliente para obter os boletos pendentes de pagamento​](schedule-payments#tag/api-de-agendamento-de-pagamentos/get/query)           |
+    | [Obter todos os itens de um grupo de pagamentos​](schedule-payments#tag/api-de-agendamento-de-pagamentos/get/{group_id}/items)         |
+    | [Remover uma lista de pagamentos de um grupo de pagamentos​](schedule-payments#tag/api-de-agendamento-de-pagamentos/delete/{group_id}/items)  |
+    | [Remover um pagamento do grupo de pagamentos​](schedule-payments#tag/api-de-agendamento-de-pagamentos/delete/{group_id}/items/{item_id})  |
+    | [Enviar um grupo de pagamentos para aprovação​](schedule-payments#tag/api-de-agendamento-de-pagamentos/post/submit)     |
+
+    Endereço dos ambientes:
+
+    | Ambiente | Host                                 | Path                         |
+    |:--------:|------------------------------------- |------------------------------|
+    | Sandbox  | https://baas-api-sandbox.c6bank.info | /v1/schedule_payments/       |
+    | Produção | https://baas-api.c6bank.info         | /v1/schedule_payments/       |
+paths:
+  /decode:
+    post:
+      tags:
+        - API de Agendamento de Pagamentos
+      summary: Enviar um grupo de pagamentos para consulta inicial
+      description: Submete um grupo de pagamentos para consulta inicial
+      parameters:
+        - $ref: "#/components/parameters/PartnerSoftwareName"
+        - $ref: "#/components/parameters/PartnerSoftwareVersion"
+        - $ref: "#/components/parameters/Authorization"
+      requestBody:
+        description: Submete um grupo de pagamentos para consulta inicial
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/payment"
+      responses:
+        "201":
+          description: Grupo de pagamentos recebido com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  group_id:
+                    $ref: "#/components/schemas/group_id"
+        4XX:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+        5XX:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+  /query:
+    get:
+      tags:
+        - API de Agendamento de Pagamentos
+      summary: Consultar um DDA do cliente para obter os boletos pendentes de pagamento
+      description: Obtém os boletos em aberto cadastrados no DDA para aquele cliente
+      parameters:
+        - $ref: "#/components/parameters/PartnerSoftwareName"
+        - $ref: "#/components/parameters/PartnerSoftwareVersion"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/ContentType"
+      responses:
+        "200":
+          description: Boletos recebidos com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/bonds"
+        4XX:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+        5XX:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+  /{group_id}/items:
+    parameters:
+      - $ref: "#/components/parameters/PartnerSoftwareName"
+      - $ref: "#/components/parameters/PartnerSoftwareVersion"
+      - $ref: "#/components/parameters/GroupId"
+      - $ref: "#/components/parameters/Authorization"
+      - $ref: "#/components/parameters/ContentType"
+    get:
+      tags:
+        - API de Agendamento de Pagamentos
+      summary: Obter todos os itens de um grupo de pagamentos
+      description: Obtém todos os itens de um grupo de pagamentos
+      responses:
+        "200":
+          description: Grupo de pagamentos obtido com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/payment"
+        4XX:
+          description: Para descrição de erros, visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+        5XX:
+          description: Para descrição de erros, visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+    delete:
+      tags:
+        - API de Agendamento de Pagamentos
+      summary: Remover uma lista de pagamentos de um grupo de pagamentos
+      description: Permite a remoção de uma lista de itens do grupo de pagamentos
+        cadastrado.
+      requestBody:
+        description: Lista de items a serem removidos do grupo de pagamentos
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                required:
+                  - id
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: Identificador do pagamento dentro do grupo. Também é utilizado em
+                      operações de consulta e remoção.
+                    examples:
+                      - 01J3NCKY6Q99QC4D7T733D35QD
+      responses:
+        "204":
+          description: Pagamentos removidos com sucesso
+        4XX:
+          description: Para descrição de erros, visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+        5XX:
+          description: Para descrição de erros, visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+  /{group_id}/items/{item_id}:
+    parameters:
+      - $ref: "#/components/parameters/PartnerSoftwareName"
+      - $ref: "#/components/parameters/PartnerSoftwareVersion"
+      - $ref: "#/components/parameters/GroupId"
+      - $ref: "#/components/parameters/ItemId"
+      - $ref: "#/components/parameters/Authorization"
+      - $ref: "#/components/parameters/ContentType"
+    delete:
+      tags:
+        - API de Agendamento de Pagamentos
+      summary: Remover um pagamento do grupo de pagamentos
+      description: Permite a remoção de um item do grupo de pagamentos cadastrado.
+      responses:
+        "204":
+          description: Pagamento removido com sucesso
+        4XX:
+          description: Para descrição de erros, visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+        5XX:
+          description: Para descrição de erros, visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+  /submit:
+    parameters:
+      - $ref: "#/components/parameters/PartnerSoftwareName"
+      - $ref: "#/components/parameters/PartnerSoftwareVersion"
+      - $ref: "#/components/parameters/Authorization"
+    post:
+      tags:
+        - API de Agendamento de Pagamentos
+      summary: Enviar um grupo de pagamentos para aprovação
+      description: Submete um grupo de pagamentos para aprovação
+      requestBody:
+        description: Id do grupo de pagamentos e responsável pela submissão do lote para
+          aprovação
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - group_id
+                - uploader_name
+              properties:
+                group_id:
+                  type: string
+                  description: Identificador forte do grupo de pagamentos. Também é utilizado em
+                    operações de consulta. Identifica um conjunto de pagamentos.
+                  examples:
+                    - 01J3NCKY6Q99QC4D7T733D35QD
+                uploader_name:
+                  $ref: "#/components/schemas/uploader_name"
+      responses:
+        "204":
+          description: Grupo submetido com sucesso
+        4XX:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+        5XX:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+servers:
+  - url: https://baas-api-sandbox.c6bank.info/v1/schedule_payments
+    description: Ambiente sandbox
+  - url: https://baas-api.c6bank.info/v1/schedule_payments
+    description: Ambiente produtivo
+components:
+  parameters:
+    Authorization:
+      in: header
+      name: Authorization
+      description: Token de acesso para autenticação. Deve ser enviado no formato
+        "Bearer {{your_access_token}}".
+      schema:
+        type: string
+      required: true
+      examples:
+        default:
+          value: Bearer {{your_access_token}}
+    ContentType:
+      in: header
+      name: Content-Type
+      description: Tipo do conteúdo da requisição
+      schema:
+        type: string
+      required: true
+      examples:
+        default:
+          value: application/x-www-form-urlencoded
+    PartnerSoftwareName:
+      in: header
+      name: partner-software-name
+      description: Nome do software do parceiro
+      schema:
+        type: string
+      required: false
+      examples:
+        default:
+          value: Super PDV
+    PartnerSoftwareVersion:
+      in: header
+      name: partner-software-version
+      description: Versão do software do parceiro
+      schema:
+        type: string
+      required: false
+      examples:
+        default:
+          value: 1.0.0
+    GroupId:
+      in: path
+      name: group_id
+      schema:
+        $ref: "#/components/schemas/group_id"
+      required: true
+    ItemId:
+      in: path
+      name: item_id
+      schema:
+        $ref: "#/components/schemas/item_id"
+      required: true
+  schemas:
+    amount:
+      type: number
+      description: Define o valor do pagamento.
+      examples:
+        - 123.45
+    bank_code:
+      type: string
+      description: É o código do banco responsável pela emissão da cobrança.
+      examples:
+        - "336"
+    bank_name:
+      type: string
+      description: É o nome do banco responsável pela emissão da cobrança.
+      examples:
+        - Banco C6
+    bar_code:
+      type: string
+      minLength: 44
+      maxLength: 44
+      description: Código de barras do boleto.
+      examples:
+        - "33695969000000123450000003048720009224128213"
+    beneficiary_name:
+      type: string
+      description: É o nome do beneficiário do pagamento (aquele que emitiu a cobrança).
+      examples:
+        - Empresa XYZ Ltda
+    bonds:
+      type: object
+      readOnly: true
+      properties:
+        amount:
+          $ref: "#/components/schemas/amount"
+        bank_code:
+          $ref: "#/components/schemas/bank_code"
+        bank_name:
+          $ref: "#/components/schemas/bank_name"
+        beneficiary_name:
+          $ref: "#/components/schemas/beneficiary_name"
+        content:
+          type: string
+          description: É o identificador do boleto. Aquilo que deve ser enviado no
+            endpoint de decode para pagamento.
+          examples:
+            - "33691991800000005000000003048720009765974213"
+        due_date:
+          $ref: "#/components/schemas/due_date"
+        overdue:
+          $ref: "#/components/schemas/overdue"
+        payer_name:
+          $ref: "#/components/schemas/payer_name"
+    br_code:
+      type: string
+      description: O BR Code (também conhecido como 'pix copia e cola') é o nome do
+        padrão de QR Code, para fins de iniciação de pagamentos, adotado no
+        Brasil, nos termos da Circular nº 3.682, de 4 de novembro de 2013.
+      minLength: 32
+      maxLength: 396
+      examples:
+        - 00020104141234567890123426580014BR.GOV.BCB.PIX0136123e4567-e12b-12d1-a456-42665544000027300012BR.COM.OUTRO011001234567895204000053039865406123.455802BR5917NOME
+          DO
+          RECEBEDOR6008BRASILIA61087007490062190515RP12345678-201980390012BR.COM.OUTRO01190123.ABCD.3456.WXYZ6304AD38
+    content:
+      type: string
+      description: É a referência do pagamento a ser realizado. Pode ser o código de
+        barras do boleto bancário ou uma chave pix.
+      anyOf:
+        - $ref: "#/components/schemas/bar_code"
+        - $ref: "#/components/schemas/br_code"
+        - $ref: "#/components/schemas/pix_key"
+      examples:
+        - "33691991800000005000000003048720009765974213"
+    description:
+      type: string
+      minLength: 1
+      maxLength: 100
+      description: É a descrição do pagamento. Esta informação será exibida na tela de
+        aprovação de pagamentos, mas não será consistida pelo C6 Bank. Serve
+        apenas como informativo e é de responsabilidade do sistema integrado à
+        API. O campo possui um limite de 100 caracteres.
+      examples:
+        - Boleto do aluguel
+    due_date:
+      type: string
+      format: date
+      readOnly: true
+      description: Data de vencimento do pagamento.
+      examples:
+        - 2023-11-25
+    error_message:
+      type: string
+      readOnly: true
+      description: Mensagem de erro ocorrido no processamento do pagamento.
+      examples:
+        - "It was not possible to find key: aerror@email.com"
+    item_id:
+      type: string
+      readOnly: true
+      description: Identificador do pagamento dentro do grupo. Também é utilizado em
+        operações de consulta e remoção.
+      examples:
+        - 01J3NCKY6Q99QC4D7T733D35QD
+    group_id:
+      type: string
+      readOnly: true
+      description: Identificador forte do grupo de pagamentos. Também é utilizado em
+        operações de consulta. Identifica um conjunto de pagamentos.
+      examples:
+        - 01J3NCKY6Q99QC4D7T733D35QD
+    overdue:
+      type: boolean
+      readOnly: true
+      description: Identifica se a cobrança está vencida.
+      examples:
+        - true
+    payer_name:
+      type: string
+      description: É o nome do sacado do pagamento (aquele a quem a cobrança se destina).
+      examples:
+        - Empresa ABC Ltda
+    payment:
+      type: object
+      required:
+        - content
+        - amount
+      properties:
+        amount:
+          $ref: "#/components/schemas/amount"
+        bank_code:
+          $ref: "#/components/schemas/bank_code"
+        bank_name:
+          $ref: "#/components/schemas/bank_name"
+        beneficiary_name:
+          $ref: "#/components/schemas/beneficiary_name"
+        content:
+          $ref: "#/components/schemas/content"
+        description:
+          $ref: "#/components/schemas/description"
+        due_date:
+          $ref: "#/components/schemas/due_date"
+        error_message:
+          $ref: "#/components/schemas/error_message"
+        group_id:
+          $ref: "#/components/schemas/group_id"
+        id:
+          $ref: "#/components/schemas/item_id"
+        overdue:
+          $ref: "#/components/schemas/overdue"
+        payer_name:
+          $ref: "#/components/schemas/payer_name"
+        product_type:
+          $ref: "#/components/schemas/product_type"
+        status:
+          $ref: "#/components/schemas/status"
+        transaction_date:
+          $ref: "#/components/schemas/transaction_date"
+    pix_key:
+      type: string
+      description: 'Este campo determina a chave Pix registrada no DICT que será
+        utilizado para o pagamento. Essa chave será utilizada para consulta ao
+        DICT, que retornará a informação que identificará o recebedor do
+        pagamento. Os tipos de chave podem ser: telefone, e-mail, cpf/cnpj ou
+        EVP. O formato das chaves pode ser encontrado na seção "Formatação das
+        chaves do DICT no BR Code" do Manual de Padrões para iniciação do Pix.'
+      pattern: ^[0-9]{11}$|^[0-9]{14}$|^\+[1-9][0-9]\d{5,14}$|[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,6}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
+      minLength: 3
+      maxLength: 300
+      examples:
+        - 5471416000101
+    product_type:
+      type: string
+      readOnly: true
+      enum:
+        - BOLETO
+        - PIX
+      description: tipo de cobrança
+    status:
+      type: string
+      readOnly: true
+      enum:
+        - READ_DATA
+        - ERROR
+        - DECODE_ERROR
+        - PROCESSED
+        - SCHEDULED
+        - PROCESSING
+        - SCHEDULING_CANCELLED
+      description: >-
+        Define o status do pagamento:
+
+        READ_DATA (item foi cadastrado com sucesso);
+
+        DECODE_ERROR (não foi possível obter informações do pagamento -
+        verifique os dados informados);
+
+        ERROR(não foi possível realizar o pagamento);
+
+        PROCESSED (item foi pago com sucesso);
+
+        SCHEDULED (item agendado);
+
+        PROCESSING(processando pagamento do item);
+
+        SCHEDULING_CANCELLED (agendamento cancelado).
+    transaction_date:
+      type: string
+      format: date
+      description: Data da efetivação da transação. É a data em que a transação deverá
+        ser realizada. Caso não seja informada, a data do dia é acatada.
+      examples:
+        - 2024-10-02
+    uploader_name:
+      type: string
+      description: É o nome do operador responsável pelo envio do grupo de pagamentos
+        para aprovação. Esta informação será exibida na tela de aprovação de
+        pagamentos, mas não será consistida pelo C6 Bank. Serve apenas como
+        informativo e é de responsabilidade do sistema integrado à API.
+      examples:
+        - Zé da Silva
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

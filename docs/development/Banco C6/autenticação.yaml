@@ -1,0 +1,277 @@
+openapi: 3.1.1
+info:
+  title: Autenticação
+  version: 1.1.2
+  description: |-
+    
+    ## O que esta API permite?
+    ________________
+
+    Para garantir maior segurança em nossos serviços, temos um processo de autorização que confirma a identidade de quem está tentando se autenticar em nossas APIs, assegurando que ela corresponde ao destinatário das credenciais enviadas.
+
+    Ela é baseada no protocolo OAuth2 para autenticação e autorização seguras, permitindo que aplicações acessem dados do usuário sem expor nenhuma informação.
+    Se houver sucesso, um token de acesso é fornecido para interagir com nossos outros recursos.
+
+    <br>
+
+    ## Autenticação via Certificado Digital
+    ________________
+
+    Nossas APIs requerem TLS mútuo (mTLS), que é uma forma de autenticação mútua entre cliente e servidor, que garante a autenticidade de ambas as partes de uma conexão de rede (cliente e servidor).
+    Verificando se os dois possuem a chave privada correspondente ao certificado importado.
+
+
+    Nós utilizamos o certificado digital para autenticar a identidade de um indivíduo, uma empresa ou um servidor.
+    Ele gera uma segurança durante as transações de dados eletrônicos, assim sendo, obrigatoriamente necessário para o uso de nossas outras APIs.
+
+    <br>
+
+    ## Sandbox e Produção
+    ________________
+
+    > Sandbox: Ambiente de testes.
+
+    O ambiente sandbox é um ambiente desenvolvido para testes, que operam com dados fictícios. Ele oferece um espaço seguro, sem realizar consultas ou causar impactos em operações e transações reais.
+    Isso permite que os desenvolvedores parceiros do C6 Bank realizem simulações e façam os ajustes necessários, antes de prosseguir para o ambiente de produção.
+
+    Este ambiente funciona de segunda à sexta-feira, das 07h às 22h.
+
+    Para solicitar suas credenciais em **Sandbox**, caso não possua uma, [clique aqui](/create-access).
+
+    <br>
+
+    ________________
+
+    > Produção: Ambiente produtivo.
+
+    O ambiente de produção é onde as aplicações e sistemas do parceiro operam com dados reais, realizando operações e transações via integração.
+    Portanto, é fundamental que os parceiros cumpram todos os requisitos de homologação do C6 Bank antes de colocar sua aplicação em produção.
+
+    Neste ambiente, as chaves são geradas dentro do web-banking ao criar as suas credenciais.
+
+    <br>
+
+    ## Como autenticar e realizar requisições em nossas APIs
+    ________________
+
+    Para iniciar o processo de autenticação, é necessário importar o certificado digital no seu sistema.
+
+    A guia 1 apresenta o passo a passo de como importar um certificado digital no Postman.
+
+    <br>
+
+    <details>
+      <summary align="center">📚 <strong>GUIA 1 - IMPORTAÇÃO DE CERTIFICADO</strong></summary>
+
+      Passo 1 a 3: Abra o Postman, ou a plataforma que você utiliza para realizar requisições e vá até o menu de configurações.
+
+      ![Passo 1](/images/import-certificates/01.png)
+
+      ![Passo 2](/images/import-certificates/02.png)
+
+      ![Passo 3](/images/import-certificates/03.png)
+
+      Passo 4: Vá até a aba de certificados e clique em "Adicionar certificado".
+
+      ![Passo 4](/images/import-certificates/04.png)
+
+      Passo 5: Preencha os campos obrigatórios, como o host e o caminho do certificado digital.
+
+      Abaixo temos o exemplo de preenchimento do campo 'host' para o ambiente de Produção, mas o mesmo processo deve ser seguido para o ambiente de Sandbox, apenas alterando o host, como na imagem seguinte.
+
+      ![Passo 5](/images/import-certificates/05.png)
+
+      Acima temos o host de Produção como exemplo e abaixo o host de Sandbox.
+
+      ![Passo 6](/images/import-certificates/06.png)
+
+      Passo 7 a 9: Importe os arquivos .crt e .key que são enviados em conjunto de suas credenciais, e clique em "Add".
+
+      ![Passo 7](/images/import-certificates/07.png)
+
+      ![Passo 8](/images/import-certificates/08.png)
+
+      ![Passo 9](/images/import-certificates/09.png)
+
+      Passo 10: Pronto! O certificado foi importado com sucesso. Siga para o guia 2 para realizar a autenticação.
+
+      ![Passo 10](/images/import-certificates/10.png)
+    </details>
+    <br>
+
+    ________________
+
+    <br>
+
+    A guia 2 apresenta o passo a passo de como autenticar suas credenciais no Postman.
+
+    <details>
+      <summary align="center">📖 <strong>GUIA 2 - AUTENTICAÇÃO</strong></summary>
+
+      Passo 1: Copie o cUrl disponibilizado nesta pagina.
+      ![Passo 01](/images/authenticate-credentials/01.png)
+
+      Passo 2 a 3: Abra a plataforma que você utiliza para enviar requisições HTTP, por exemplo, o Postman, e importe o comando cURL que você copiou anteriormente.
+
+      ![Passo 02](/images/authenticate-credentials/02.png)
+
+      ![Passo 03](/images/authenticate-credentials/03.png)
+
+      Passo 4: Preencha os campos client_id e client_secret com os valores fornecidos para você nas chaves correspondentes.
+      ![Passo 04](/images/authenticate-credentials/04.png)
+
+      Passo 5: Envie a requisição.
+      Você deve receber o status '200', indicando que a autenticação foi realizada com sucesso.
+
+      Utilize o token de acesso (access_token) retornado na resposta para realizar as demais requisições às APIs do C6 Bank.
+
+      ![Passo 05](/images/authenticate-credentials/05.png)
+
+    </details>
+
+    ## Informações úteis:
+    - [Termos de uso (ao usar essa API você concorda com estes termos)](https://www.c6bank.com.br/termos-de-uso/)
+    - [Saiba mais sobre o C6 Bank](https://www.c6bank.com)
+    - [Saiba mais sobre esse produto C6 Bank](https://www.c6bank.com.br/maquininha-de-cartao-c6-pay/)
+
+    <br>
+
+    ________________
+
+    ## **Resumo Técnico da API**
+
+    Esta API possui apenas uma operação disponível.
+
+    | Operação                                                                    |
+    |:---------------------------------------------------------------------------:|
+    | [Autenticação](auth#tag/api-de-autenticação/POST/)                          |
+
+    Endereço dos ambientes:
+
+    | Ambiente | Host                                 | Path            |
+    |:--------:|------------------------------------- |-----------------|
+    | Sandbox  | https://baas-api-sandbox.c6bank.info | /v1/auth/       |
+    | Produção | https://baas-api.c6bank.info         | /v1/auth/       |
+
+    **Observações**
+
+    Antes de realizar qualquer requisição, importe o certificado digital no seu sistema, conforme guia 1.
+
+    A autenticação expira após 10 minutos de inatividade. Após esse tempo, será necessário realizar a autenticação novamente.
+    Vale destacar também que a autenticação não precisa ser realizada a cada ação, mas somente quando o tempo de expiração for atingido.
+
+    Usando o <b>Postman</b>, você pode informar o <code>client_id</code> e o <code>client_secret</code> de duas formas: adicionando-os na aba <b>Auth</b> ou diretamente no <b>Body</b> da requisição.
+
+    Antes de enviar uma requisição, certifique-se de que as chaves <code>client_id</code> e <code>client_secret</code> estão preenchidas corretamente e que o certificado digital já foi importado no sistema.
+
+    Você pode criar duas variáveis de ambiente e associá-las a <code>{{client_id}}</code> e <code>{{client_secret}}</code>, as adicionando como valor na chave ou você pode só passar os valores diretamente na chave (substituindo <code>{{client_id}}</code> e <code>{{client_secret}}</code> por suas credenciais).
+tags:
+  - name: API de Autenticação
+servers:
+  - url: https://baas-api-sandbox.c6bank.info/v1/auth
+    description: Ambiente sandbox
+  - url: https://baas-api.c6bank.info/v1/auth
+    description: Ambiente produtivo
+paths:
+  /:
+    post:
+      tags:
+        - API de Autenticação
+      summary: Gerar token de sessão
+      description: >-
+        **Antes de realizar essa etapa, certifique-se de que o certificado
+        digital foi importado.**
+
+
+        Esta ação é necessária para gerar um token de sessão, permitindo o
+        acesso às outras APIs do C6Bank.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - client_id
+                - client_secret
+                - grant_type
+              properties:
+                client_id:
+                  type: string
+                  description: Seu client id
+                  examples:
+                    - client_id
+                client_secret:
+                  type: string
+                  description: Seu client secret
+                  examples:
+                    - client_secret
+                grant_type:
+                  type: string
+                  enum:
+                    - client_credentials
+                  description: "'grant type' define o método pelo qual seu sistema adquirirá um
+                    token de acesso para consumir nossa API."
+                  examples:
+                    - client_credentials
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthenticationResponse"
+        4xx:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+        5xx:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+components:
+  parameters:
+    ContentType:
+      in: header
+      name: Content-Type
+      description: Tipo do conteúdo da requisição
+      schema:
+        type: string
+      required: true
+      examples:
+        default:
+          value: application/x-www-form-urlencoded
+  schemas:
+    AuthenticationResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: Token de acesso. É sua chave de acesso a qualquer outra API do C6
+            Bank documentada neste portal. Deve ser mantido em sigilo e
+            preferencialmente não armazenado de maneira persistente. Deve ser
+            usada para liberar o acesso à outras requisições.
+          readOnly: true
+          examples:
+            - TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gRG9uZWMgYXQgcHVsdmluYXIganVzdG8uIFByb2luIGEgbnVuYyBhYyBkdWkgaGVuZHJlcml0IG1hdHRpcyBub24gdml0YWUgdXJuYS4gSW4gZWdldCBlcm9zIGNvbnNlcXVhdCwgbG9ib3J0aXMgbGliZXJvIHF1aXMsIGxhY2luaWEgbmlzbC4gTWF1cmlzIHNlZCBkaWN0dW0gZW5pbS4gRXRpYW0gbmVjIG5pc2kgdmVsaXQuIEludGVnZXIgc2VkIG5lcXVlIGFsaXF1ZXQsIG1hdHRpcyBlcm9zIGVnZXQsIG1vbGxpcyBhcmN1LiBRdWlzcXVlIGludGVyZHVtIHNlbSBhYyB0ZWxsdXMgY29uZ3VlLCBuZWMgZGljdHVtIGxlbyB0aW5jaWR1bnQuIFBoYXNlbGx1cyBpbiBmYWNpbGlzaXMgb3JjaS4gQWVuZWFuIGEgbGFjdXMgdXQgbGVvIHNlbXBlciBhY2N1bXNhbi4gTnVsbGFtIHZlbmVuYXRpcyBjb252YWxsaXMgc2FwaWVuIHF1aXMgZWdlc3Rhcy4=
+        expires_in:
+          type: integer
+          description: Tempo de expiração do token (em segundos). Após esse período, um
+            novo token deverá ser gerado.
+          readOnly: true
+          examples:
+            - 300
+        token_type:
+          type: string
+          description: O token retornado nesta API será sempre em formato "Bearer".
+          readOnly: true
+          examples:
+            - Bearer
+        scope:
+          type: string
+          description: Escopos que a chave gerada tem acesso. Estes escopos definem os
+            poderes do portador do access token perante a conta associada.
+          readOnly: true
+          examples:
+            - bankslip.write webhook.read pix.read webhook.write pix.write
+              bankslip.read

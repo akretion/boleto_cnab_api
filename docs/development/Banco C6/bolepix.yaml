@@ -1,0 +1,861 @@
+openapi: 3.1.1
+info:
+  title: Bolepix
+  version: 1.0.1
+  description: |-
+    ## O que esta API permite?
+    A API de Bolepix oferece uma solução completa para a gestão de cobranças. Com ela, é possível automatizar processos financeiros, integrar diferentes métodos de pagamento em um único fluxo e garantir maior flexibilidade e agilidade na conciliação de recebíveis.
+
+    ## Objetivo
+    O objetivo da API é permitir a emissão, consulta, download e baixa (cancelamento) de cobranças que podem ser pagas tanto por boleto bancário quanto por Pix QR Code no C6 Bank.
+
+    - Emissão de uma cobrança contendo boleto bancário e  Pix QR Code.
+    - Acréscimo de juros e multa ao valor inicial para pagamento pós vencimento.
+    - Concessão de desconto por antecipação do pagamento.
+    - Consulta de uma cobrança previamente emitida.
+    - Download da cobrança emitida em formato PDF
+    - Baixa de uma cobrança emitida e não paga
+
+    ________________
+
+    ## Carteiras
+
+    O C6 Bank oferece duas carteiras de cobrança:
+
+    Carteira para **produção** sendo a carteira do número: 15
+
+    Carteira para **sandbox** sendo a carteira do número: 21
+
+    ________________
+
+    ## **Resumo Técnico da API**
+
+    Operações disponíveis para esta API:
+
+    | Operações                                                                                               |
+    |:-------------------------------------------------------------------------------------------------------:|
+    | [Gerar cobranças de BolePix](bolepix#tag/api-de-bolepix/post/)                                     |
+    | [Listar cobranças de BolePix](bolepix#tag/api-de-bolepix/get/)                                     |
+    | [Consultar cobrança](bolepix#tag/api-de-bolepix/get/{external_reference_id})                            |
+    | [Cancelar cobrança](bolepix#tag/api-de-bolepix/put/{external_reference_id}/cancel)                      |
+
+    ## Endereços dos ambientes:
+
+    | Ambiente | Host                                 | Path            |
+    |:--------:|------------------------------------- |-----------------|
+    | Sandbox  | https://baas-api-sandbox.c6bank.info | /v2/bank_slips/ |
+    | Produção | https://baas-api.c6bank.info         | /v2/bank_slips/ |
+servers:
+  - url: https://baas-api-sandbox.c6bank.info/v2/bank_slips/
+    description: Ambiente sandbox
+  - url: https://baas-api.c6bank.info/v2/bank_slips/
+    description: Ambiente produtivo
+tags:
+  - name: API de Bolepix
+    description: Operações de Bolepix
+paths:
+  /:
+    post:
+      tags:
+        - API de Bolepix
+      summary: Gerar cobranças de BolePix
+      description: Gera uma nova cobrança de BolePix.
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/PartnerSoftwareName"
+        - $ref: "#/components/parameters/PartnerSoftwareVersion"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/bank_slip_pix_create_request"
+        required: true
+      responses:
+        "201":
+          description: Cobrança emitida com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/bank_slip_pix_create_response"
+        4XX:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+        5XX:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+    get:
+      tags:
+        - API de Bolepix
+      summary: Listar cobranças geradas
+      description: Lista as cobranças emitidas, com possibilidade de filtros por data
+        de vencimento, data de pagamento, status e external reference id, ao
+        menos um intervalo de datas é obrigatório (payment_date ou due_date).
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/PartnerSoftwareName"
+        - $ref: "#/components/parameters/PartnerSoftwareVersion"
+        - name: payment_date_from
+          in: query
+          description: Data de início para filtro por data de pagamento. Formato
+            YYYY-MM-DD (O intervalo máximo entre datas é de 60 dias).
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: payment_date_to
+          in: query
+          description: Data de fim para filtro por data de pagamento. Formato YYYY-MM-DD
+            (O intervalo máximo entre datas é de 60 dias).
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: due_date_from
+          in: query
+          description: Data de início para filtro por data de vencimento. Formato
+            YYYY-MM-DD (O intervalo máximo entre datas é de 60 dias).
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: due_date_to
+          in: query
+          description: Data de fim para filtro por data de vencimento. Formato YYYY-MM-DD
+            (O intervalo máximo entre datas é de 60 dias).
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: status
+          in: query
+          description: "Filtro por status atual da cobrança. <br> Possíveis status: <br>
+            **CREATED** -> Cobrança criada. <br> **PAID** -> Pagamento
+            liquidado. <br> **CANCELED** -> Cobrança cancelada. <br>
+            **WAITING_CONFIRMATION** -> O pagamento da cobrança foi confirmado,
+            no entanto, os recursos financeiros ainda não foram creditados na
+            conta."
+          required: false
+          schema:
+            type: string
+            enum:
+              - CREATED
+              - PAID
+              - CANCELED
+              - WAITING_CONFIRMATION
+        - name: external_reference_id
+          in: query
+          description: Filtro por external reference id.
+          required: false
+          schema:
+            type: string
+            pattern: ^[A-Z0-9]{26}$
+            minLength: 26
+            maxLength: 26
+            examples:
+              - 01KP640RNSYXH9G41GR27RTAWP
+        - name: page
+          in: query
+          description: Número da página para paginação dos resultados.
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          description: Quantidade de itens por página para paginação dos resultados.
+          required: false
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+            examples:
+              - 20
+      responses:
+        "200":
+          description: Cobrança obtida com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/bank_slip_pix_list_response"
+        4XX:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+        5XX:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+  /{external_reference_id}:
+    parameters:
+      - $ref: "#/components/parameters/PartnerSoftwareName"
+      - $ref: "#/components/parameters/PartnerSoftwareVersion"
+      - $ref: "#/components/parameters/Authorization"
+    get:
+      tags:
+        - API de Bolepix
+      summary: Consultar cobrança pelo external reference id.
+      description: Consulta pelo external reference id uma cobrança já emitida
+      parameters:
+        - $ref: "#/components/parameters/Bank_Slip_Id"
+      responses:
+        "200":
+          description: Cobrança obtida com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/bank_slip_pix_get_response"
+        4XX:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+        5XX:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+  /{external_reference_id}/pdf:
+    parameters:
+      - $ref: "#/components/parameters/PartnerSoftwareName"
+      - $ref: "#/components/parameters/PartnerSoftwareVersion"
+      - $ref: "#/components/parameters/Authorization"
+    get:
+      tags:
+        - API de Bolepix
+      summary: Consultar PDF da cobrança pelo external reference id.
+      description: Consulta pelo external reference id o PDF de uma cobrança já emitida
+      parameters:
+        - $ref: "#/components/parameters/Bank_Slip_Id"
+      responses:
+        "200":
+          description: PDF da cobrança obtido com sucesso
+        4XX:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+        5XX:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+  /{external_reference_id}/cancel:
+    put:
+      tags:
+        - API de Bolepix
+      summary: Cancelar cobrança pelo external reference id.
+      description: Baixa uma cobrança pelo external reference id. Uma cobrança baixada
+        deixa de estar disponível para pagamento.
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/PartnerSoftwareName"
+        - $ref: "#/components/parameters/PartnerSoftwareVersion"
+        - $ref: "#/components/parameters/Bank_Slip_Id"
+      responses:
+        "204":
+          description: Cobrança baixada com sucesso
+        4XX:
+          description: Para descrição de erros, visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+        5XX:
+          description: Para descrição de erros, visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+components:
+  parameters:
+    Authorization:
+      in: header
+      name: Authorization
+      description: Token de acesso para autenticação. Deve ser enviado no formato
+        "Bearer {{your_access_token}}".
+      schema:
+        type: string
+      required: true
+      examples:
+        default:
+          value: Bearer {{your_access_token}}
+    PartnerSoftwareName:
+      in: header
+      name: partner-software-name
+      description: Nome do software do parceiro
+      schema:
+        type: string
+      required: false
+      examples:
+        default:
+          value: Super PDV
+    PartnerSoftwareVersion:
+      in: header
+      name: partner-software-version
+      description: Versão do software do parceiro
+      schema:
+        type: string
+      required: false
+      examples:
+        default:
+          value: 1.0.0
+    Bank_Slip_Id:
+      in: path
+      name: external_reference_id
+      description: Utilizado como identificador forte do título. Também é utilizado em
+        operações de consulta, cancelamento, alteração, etc. É a principal chave
+        da transação para o ambiente C6 Bank.
+      schema:
+        type: string
+      required: true
+      examples:
+        default:
+          value: 01J3NCKY6Q99QC4D7T733D35QD
+  schemas:
+    address:
+      type: object
+      description: >
+        Endereço do pagador do título (sacado).
+
+        Este objeto reúne todas as informações relacionadas ao endereço da
+        pessoa ou empresa responsável pelo pagamento do boleto.
+      required:
+        - city
+        - state
+        - address
+        - zip_code
+      properties:
+        address:
+          type: string
+          maxLength: 40
+          description: Nome da rua e numero do endereço do cliente pagador (sacado). O
+            conteúdo total deste campo não pode ultrapassar 40 caracteres.
+          examples:
+            - Av. Nove de Julho, 3186
+        neighborhood:
+          type: string
+          maxLength: 40
+          description: Bairro do endereço do pagador.
+          examples:
+            - Bairro
+        city:
+          type: string
+          maxLength: 40
+          description: Cidade do endereço do pagador.
+          examples:
+            - São Paulo
+        state:
+          type: string
+          maxLength: 2
+          pattern: "[A-Z]{2}"
+          description: UF do endereço do cliente pagador. Deve conter exatamente dois
+            caracteres em letras maiúsculas.
+          examples:
+            - SP
+        zip_code:
+          type: string
+          minLength: 8
+          maxLength: 8
+          pattern: \d{8}
+          description: CEP do endereço do pagador, informado sem traços ou espaços.
+          examples:
+            - "01406000"
+    description:
+      type: string
+      maxLength: 100
+      description: >
+        Descrição da cobrança.
+
+        Este campo é obrigatório para a emissão do boleto e pode conter até 100
+        caracteres.
+      examples:
+        - Compra de produto X
+    fees:
+      type: object
+      description: Objeto utilizado para configurar multas, juros e descontos
+        aplicáveis ao boleto.
+      properties:
+        fine_value:
+          type: number
+          description: Valor da multa por atraso.
+          minimum: 0
+          examples:
+            - 10
+        fine_deadline:
+          type: integer
+          description: Quantidade de dias após o vencimento para que a multa seja aplicada.
+          examples:
+            - 5
+        fine_type:
+          type: string
+          enum:
+            - FIXED_VALUE
+            - PERCENTAGE
+          description: Define se a multa por atraso será aplicada como valor fixo ou como
+            percentual do valor do boleto.
+          examples:
+            - FIXED_VALUE
+        interest_value:
+          type: number
+          description: Valor dos juros cobrados por atraso.
+          minimum: 0
+          examples:
+            - 10
+        interest_deadline:
+          type: integer
+          description: Quantidade de dias após o vencimento para início da cobrança de
+            juros.
+          examples:
+            - 5
+        interest_type:
+          type: string
+          enum:
+            - VALUE_PER_DAY
+            - MONTHLY_PERCENTAGE
+          description: |
+            Define a forma de cálculo dos juros por atraso:
+              - Valor fixo diário
+              - Percentual mensal
+          examples:
+            - VALUE_PER_DAY
+        discount_type:
+          type: string
+          enum:
+            - VALUE_PER_DAY
+            - MONTHLY_PERCENTAGE
+          description: Define a forma de cálculo do desconto por pagamento antecipado.
+          examples:
+            - VALUE_PER_DAY
+        first_discount_value:
+          type: number
+          description: Valor do primeiro desconto por pagamento antecipado.
+          minimum: 0
+          examples:
+            - 10
+        first_discount_deadline:
+          type: integer
+          description: Quantidade de dias antes do vencimento em que o primeiro desconto
+            será aplicado.
+          examples:
+            - 10
+    amount:
+      type: number
+      description: Valor principal da cobrança.
+      maximum: 5000000
+      examples:
+        - 123.45
+    origin:
+      type: string
+      maxLength: 20
+      description: Origem da venda ou do serviço que está sendo cobrado.
+      examples:
+        - e-commerce
+    bank_slip_pix_create_request:
+      type: object
+      required:
+        - amount
+        - due_date
+        - description
+        - payer
+        - payment_method
+      properties:
+        external_reference_id:
+          $ref: "#/components/schemas/external_reference_id"
+        amount:
+          $ref: "#/components/schemas/amount"
+        due_date:
+          $ref: "#/components/schemas/due_date"
+        description:
+          $ref: "#/components/schemas/description"
+        days_after_due_date:
+          type: integer
+          description: Quantidade de dias, contados a partir da data de vencimento, após
+            os quais a cobrança expira.
+          examples:
+            - 10
+        payer:
+          $ref: "#/components/schemas/payer"
+        fees:
+          $ref: "#/components/schemas/fees"
+        payment_method:
+          type: object
+          description: Objeto utilizado para controle do método de pagamento. Este campo é
+            obrigatório para emissão da cobrança
+          required:
+            - bank_slip
+          properties:
+            bank_slip:
+              type: object
+              description: Objeto utilizado para controle do método de pagamento boleto e pix.
+                Existe a possibilidade de emitir um boleto sem Pix, basta não
+                passar os dois campos próprios para Pix.
+              required:
+                - billing_scheme
+              properties:
+                our_number:
+                  $ref: "#/components/schemas/our_number"
+                billing_scheme:
+                  $ref: "#/components/schemas/billing_scheme"
+                your_number:
+                  $ref: "#/components/schemas/your_number"
+                instructions:
+                  $ref: "#/components/schemas/instructions"
+            pix:
+              type: object
+              description: Objeto utilizado para controle das informações específicas do
+                pagamento via Pix.
+              required:
+                - type
+                - key
+              properties:
+                key:
+                  type: string
+                  description: Chave Pix a ser utilizada para geração do QR Code. **Importante:**
+                    A chave estar cadastrada no C6 Bank e precisa ser do tipo
+                    chave aleatória. Se esse campo não for enviado ou se for
+                    enviado uma chave PIX inválida, a cobrança é criada
+                    normalmente, mas sem as informações do Pix (QR Code, imagem
+                    do QR Code e referência).
+                  examples:
+                    - 123e4567-e89b-12d3-a456-426614174000
+                type:
+                  type: string
+                  description: Tipo de chave Pix utilizada. Atualmente só é suportado EVP.
+                    **Importante:** Se esse campo não for enviado, a cobrança
+                    será criada normalmente, mas sem as informações do Pix (QR
+                    Code, imagem do QR Code e referência).
+                  enum:
+                    - EVP
+                  examples:
+                    - EVP
+        origin:
+          $ref: "#/components/schemas/origin"
+    bank_slip_pix_create_response:
+      type: object
+      properties:
+        id:
+          $ref: "#/components/schemas/id"
+        external_reference_id:
+          $ref: "#/components/schemas/external_reference_id"
+        amount:
+          $ref: "#/components/schemas/amount"
+        due_date:
+          $ref: "#/components/schemas/due_date"
+        payment_method:
+          $ref: "#/components/schemas/payment_method"
+    bank_slip_pix_get_response:
+      type: object
+      properties:
+        amount:
+          $ref: "#/components/schemas/amount"
+        due_date:
+          $ref: "#/components/schemas/due_date"
+        payment_method:
+          $ref: "#/components/schemas/payment_method"
+        id:
+          $ref: "#/components/schemas/id"
+        description:
+          $ref: "#/components/schemas/description"
+        days_after_due_date:
+          type: integer
+          description: Quantidade de dias, contados a partir da data de vencimento, após
+            os quais a cobrança expira.
+          examples:
+            - 10
+        status:
+          type: string
+          enum:
+            - CREATED
+            - PAID
+            - CANCELED
+            - WAITING_CONFIRMATION
+          description: "Status atual da cobrança. <br> Possíveis status: <br> **CREATED**
+            -> Cobrança criada. <br> **PAID** -> Pagamento liquidado. <br>
+            **CANCELED** -> Cobrança cancelada. <br> **WAITING_CONFIRMATION** ->
+            O pagamento da cobrança foi confirmado, no entanto, os recursos
+            financeiros ainda não foram creditados na conta."
+          examples:
+            - CREATED
+        payer:
+          $ref: "#/components/schemas/payer"
+        fees:
+          $ref: "#/components/schemas/fees"
+        origin:
+          $ref: "#/components/schemas/origin"
+        external_reference_id:
+          $ref: "#/components/schemas/external_reference_id"
+    bank_slip_pix_object_list_response:
+      allOf:
+        - $ref: "#/components/schemas/bank_slip_pix_get_response"
+        - type: object
+          properties:
+            payments:
+              $ref: "#/components/schemas/payments"
+    bank_slip_pix_list_response:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/bank_slip_pix_object_list_response"
+        total_elements:
+          type: integer
+          examples:
+            - 10
+        total_pages:
+          type: integer
+          examples:
+            - 1
+        page:
+          type: integer
+          examples:
+            - 0
+        size:
+          type: integer
+          examples:
+            - 20
+    payments:
+      type: array
+      description: Lista de pagamentos da cobrança.
+      items:
+        type: object
+        required:
+          - amount
+          - external_payment_id
+          - payment_date
+          - payment_type
+        properties:
+          amount:
+            type: string
+            description: Valor do pagamento com duas casas decimais.
+            pattern: ^\d+(\.\d{2})$
+            examples:
+              - "123.45"
+          external_payment_id:
+            type: string
+            description: Identificador externo do pagamento.
+            pattern: ^[A-Z0-9]{26}$
+            minLength: 26
+            maxLength: 26
+            examples:
+              - 01KVG41MYPFJRCJE4AVK9NCFQ1
+          payment_date:
+            type: string
+            format: date
+            description: Data em que o pagamento foi realizado.
+            examples:
+              - 2026-06-19
+          credit_date:
+            type: string
+            format: date
+            description: Data em que o valor foi creditado na conta.
+            examples:
+              - 2026-06-22
+          payment_type:
+            type: string
+            description: Tipo de pagamento.
+            enum:
+              - BANK_SLIP
+              - PIX
+            examples:
+              - BANK_SLIP
+    payment_method:
+      type: object
+      description: Objeto utilizado para controle do método de pagamento. Este campo é
+        obrigatório para emissão da cobrança
+      required:
+        - bank_slip
+        - pix
+      properties:
+        bank_slip:
+          type: object
+          description: Objeto utilizado para controle das informações específicas do boleto.
+          properties:
+            originator_id:
+              $ref: "#/components/schemas/originator_id"
+            billing_scheme:
+              $ref: "#/components/schemas/billing_scheme"
+            billing_type:
+              $ref: "#/components/schemas/billing_type"
+            digitable_line:
+              $ref: "#/components/schemas/digitable_line"
+            bar_code:
+              $ref: "#/components/schemas/bar_code"
+            our_number:
+              $ref: "#/components/schemas/our_number"
+            number:
+              type: string
+              description: Número do título gerado pelo cliente. Este campo é utilizado para
+                controle do título pelo cliente e deve ser único para cada
+                título emitido.
+              examples:
+                - "12345678"
+        pix:
+          type: object
+          description: Objeto utilizado para controle das informações específicas do
+            pagamento via Pix.
+          properties:
+            qr_code:
+              type: string
+              description: Código QR para pagamento via Pix.
+              examples:
+                - 00020126580014BR.GOV.BCB.PIX0114123e4567-e89b-12d3-a456-4266141740005204000053039865404123.455802BR5909Fulano
+                  de Tal6009Sao Paulo61080540900062070503***6304B14F
+            image_content:
+              type: string
+              description: Imagem do código QR para pagamento via Pix, codificada em Base64.
+              contentEncoding: base64
+            mime_type:
+              type: string
+              description: Tipo MIME da imagem do código QR para pagamento via Pix.
+              examples:
+                - image/png
+            reference:
+              type: string
+              description: Identificador único para controle do pagamento via Pix.
+              examples:
+                - 123e4567-e89b-12d3-a456-426614174000
+    bar_code:
+      type: string
+      readOnly: true
+      description: Código de barras do boleto.
+      examples:
+        - "33695969000000123450000003048720009224128213"
+    billing_scheme:
+      type: string
+      description: Código da carteira de cobrança. No ambiente de produção, utilize a
+        carteira 15. No ambiente de sandbox, utilize a carteira 21.
+      examples:
+        - "15"
+    billing_type:
+      type: string
+      readOnly: true
+      description: Identifica se a cobrança é gerada pelo banco ou pelo cedente. 3 -
+        para cobrança registrada com emissão pelo banco 4 - para cobrança direta
+        com emissão pelo cedente
+      enum:
+        - "3"
+        - "4"
+    digitable_line:
+      type: string
+      readOnly: true
+      description: Linha digitável do boleto.
+      examples:
+        - 33690.00009   03048.720001   92241.282133   5   96900000012345
+    due_date:
+      type: string
+      format: date
+      description: Data de vencimento do título. Na geração do título, deve ser igual
+        ou maior que a data atual.
+      examples:
+        - 2023-11-25
+    emission_date:
+      type: string
+      format: date
+      readOnly: true
+      description: Data da criação do título.
+      examples:
+        - 2023-11-22
+    external_reference_id:
+      type: string
+      pattern: ^[A-Z0-9]{26}$
+      minLength: 26
+      maxLength: 26
+      description: É o identificador do lado do agente externo. Não é consistido pelo
+        C6 Bank, mas não pode ser repetido para um mesmo cliente. É transportado
+        e retornado nas operações de consulta. Este identificador é único, se
+        enviado em duas emissões diferentes, a segunda emissão não gerará um
+        novo título, mas sim retornará os dados do título já existente. Assim,
+        sempre que desejar criar uma nova cobrança, deve ser informado um novo
+        external_reference_id.
+      examples:
+        - 01KP640RNSYXH9G41GR27RTAWP
+    id:
+      type: string
+      readOnly: false
+      description: Utilizado como identificador forte do título. Também é utilizado em
+        operações de consulta, cancelamento, alteração, etc. É a principal chave
+        da transação para o ambiente C6 Bank.
+      examples:
+        - 01HVSBSTN8CCTCTEQT6MC7TD4B
+    instructions:
+      type: array
+      items:
+        type: string
+      description: |
+        Instruções exibidas no boleto para o operador de caixa.
+        São permitidas no máximo 4 instruções, cada uma com até 80 caracteres.
+      examples:
+        - - Não receber após o vencimento
+          - str2
+          - str3
+          - str4
+    internal_id:
+      type: string
+      readOnly: true
+      description: Identificador interno do boleto.
+      examples:
+        - A1234
+    originator_id:
+      type: string
+      readOnly: true
+      description: É o código do cedente.
+      examples:
+        - 304872
+    our_number:
+      type: string
+      readOnly: false
+      minLength: 1
+      maxLength: 10
+      pattern: ^\d{1,10}$
+      description: É o "nosso número", identificador único do título junto ao banco
+        para aquele cedente. Geralmente é gerado pelo próprio banco, mas pode
+        ser gerado pelo cliente em situações específicas.
+      examples:
+        - "0000003048"
+    your_number:
+      type: string
+      readOnly: false
+      minLength: 1
+      maxLength: 10
+      pattern: ^\d{1,10}$
+      examples:
+        - "0000003048"
+    payer:
+      type: object
+      description: Dados do pagador do título, ou seja, a pessoa física ou jurídica
+        responsável pelo pagamento do boleto.
+      required:
+        - name
+        - tax_id
+        - address
+      properties:
+        name:
+          type: string
+          maxLength: 40
+          pattern: ^(?!\s*$).+
+          description: Nome completo do pagador (para pessoa física) ou razão social (para
+            pessoa jurídica).
+          examples:
+            - José da Silva
+        tax_id:
+          type: string
+          minLength: 11
+          maxLength: 14
+          description: >
+            Documento fiscal do pagador. - CPF para pessoa física - CNPJ para
+            pessoa jurídica ou MEI. Enviar somente números, sem máscara,
+            respeitando os zeros à esquerda.
+          examples:
+            - "12345678910"
+        email:
+          type: string
+          format: email
+          maxLength: 70
+          pattern: ^[a-z0-9.!#$&amp;'*+\/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$
+          description: Endereço de email do cliente pagador (sacado).
+          examples:
+            - pagador@email.com.br
+        address:
+          $ref: "#/components/schemas/address"
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

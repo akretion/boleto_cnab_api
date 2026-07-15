@@ -1,0 +1,4653 @@
+openapi: 3.1.1
+info:
+  title: PIX Automático
+  version: 1.0.0
+  description: |
+    ## **O que esta API permite?**
+
+    A API de Pix Automático permite automatizar pagamentos recorrentes, como mensalidades, assinaturas e prestações de serviço,
+    por meio de uma única autorização do pagador. Após essa autorização, os valores são debitados automaticamente
+    via Pix nas datas programadas, garantindo praticidade, segurança e pontualidade nos pagamentos.
+
+    ________________
+
+    ## **JORNADAS**
+
+    As jornadas de Pix Automático são os diferentes fluxos (caminhos) definidos pelo Banco Central para que um usuário pagador
+    autorize cobranças recorrentes via Pix. Elas estruturam como a autorização acontece, variando conforme o canal (push, QR Code, notificação externa, etc.)
+    e a experiência desejada pela empresa e pelo cliente.
+
+    Então, de forma simples, jornadas são modelos padronizados de ativação que permitem que uma empresa peça ao cliente autorização para cobrar automaticamente, semelhante ao débito automático, mas via Pix.
+    Cada jornada possui um fluxo específico de como a autorização é iniciada, exibida ao usuário e confirmada.
+
+
+    <div>
+        <img src="/images/pix-automatico/jornadasmap1.jpeg" alt="Jornadas1">
+        <img src="/images/pix-automatico/jornadasmap2.jpg" alt="Jornadas2">
+    </div>
+
+
+    <details>
+      <summary align="center"><strong>JORNADA 1</strong></summary>
+
+      **Jornada 1 – Autorização sem QR Code (Notificação via App)**
+
+      Descrição: A autorização da recorrência ocorre sem uso de QR Code, a partir de uma oferta digital enviada ao pagador,
+      que recebe uma notificação no aplicativo de sua instituição para confirmação.
+
+      <img src="/images/pix-automatico/jornada01.png" alt="Jornada1">
+      <img src="/images/pix-automatico/jornadas-separadas/jornada01.png" alt="JornadaSeparada1">
+
+      <a href="pix-automatico#tag/jornada1/post/rec">Clique aqui para ir até o fluxo da Jornada 1</a>
+    </details>
+    <br>
+
+    <details>
+      <summary align="center"><strong>JORNADA 2</strong></summary>
+
+      **Jornada 2 – Autorização com QR Code (Somente Dados da Recorrência)**
+
+      Descrição: O QR Code contém exclusivamente os dados da recorrência, sem pagamento imediato associado.
+
+      <img src="/images/pix-automatico/jornada02.png" alt="Jornada2">
+      <img src="/images/pix-automatico/jornadas-separadas/jornada02.png" alt="JornadaSeparada2">
+
+      <a href="pix-automatico#tag/jornada2/post/locrec">Clique aqui para ir até o fluxo da Jornada 2</a>
+    </details>
+    <br>
+
+    <details>
+      <summary align="center"><strong>JORNADA 3</strong></summary>
+
+      **Jornada 3 – Autorização com QR Code (Pagamento Imediato + Recorrência)**
+
+      Descrição: O QR Code combina: Pagamento imediato e Autorização da recorrência para cobranças futuras
+
+      <img src="/images/pix-automatico/jornada03.png" alt="Jornada3">
+      <img src="/images/pix-automatico/jornadas-separadas/jornada03.png" alt="JornadaSeparada3">
+
+      <a href="pix-automatico#tag/jornada3/post/locrec">Clique aqui para ir até o fluxo da Jornada 3</a>
+    </details>
+    <br>
+
+    <details>
+      <summary align="center"><strong>JORNADA 4</strong></summary>
+
+      **Jornada 4 – Autorização com QR Code (Pagamento/Agendamento + Oferta de Recorrência)**
+
+      Descrição: O QR Code combina: Pagamento imediato e Autorização da recorrência para cobranças futuras
+
+      <img src="/images/pix-automatico/jornada04.png" alt="Jornada4">
+      <img src="/images/pix-automatico/jornadas-separadas/jornada04.png" alt="JornadaSeparada4">
+
+      <a href="pix-automatico#tag/jornada4/post/locrec">Clique aqui para ir até o fluxo da Jornada 4</a>
+    </details>
+
+    <br>
+
+    <details>
+      <summary align="center"><strong>CASOS DE USO</strong></summary>
+
+      **Caso de Uso: QR Code Composto**
+      **Utilização de QR Code Composto apenas para ofertar uma recorrência**
+
+      **Aplicação:** Prestadores de serviço que desejam ofertar o pagamento de cobranças recorrentes via Pix Automático. Corresponde à <a href="pix-automatico#tag/jornada2/post/rec">Jornada 2</a> de autorização.
+
+      **Exemplos:** Serviços de Internet, Taxas de Condomínio.
+
+      **Premissa:** deve existir uma recorrência já criada e ainda não autorizada.
+
+      <blockquote>
+      Para configurar a API Pix para esse caso de uso, o primeiro passo é criar uma “location”, a URL que exibirá os parâmetros da recorrência, e que será configurada no QR Code composto:
+
+      Serviços invocados:
+      * POST /locrec → será retornado o identificador da “location” e a URL que será utilizada para exibir os parâmetros da recorrência.
+      * POST /rec → antes de mostrar o QR Code Composto ao usuário pagador, o usuário recebedor cria a recorrência com o identificador da “location” recebido do serviço anterior com todos os parâmetros da recorrência.
+
+      <dl>	O usuário pagador (cliente) recebe uma oferta do usuário recebedor (fornecedor) para aderir ao Pix Automático via um QR Code composto com dados de recorrência. </dl>
+
+      Serviços invocados:
+      * GET /rec/{idRec} → após a definição da location e criação da recorrência, nos endpoints anteriores, o usuário recebedor acessa este endpoint para obtenção dos dados de recorrência com o campo ‘dadosQR’ preenchido com a informação de jornada 2 e o Pix Copia e Cola correspondente ao QR Composto desejado para a exibição ao usuário pagador.
+
+      <dl> O cliente lê o QR Code composto por meio do app do seu PSP </dl>
+
+      Serviço invocado:
+      * GET /rec/{recUrlAccessToken} → o PSP Pagador lê os dados da recorrência para controle e apresentação ao usuário pagador para aceite.
+
+      <dl> O cliente conclui a jornada 2, confirmando a autorização do Pix Automático para pagamentos àquele fornecedor. </dl>
+      <dl> As próximas cobranças serão enviadas pelo usuário recebedor ao PSP pagador, passando pelo PSP recebedor, por meio de instruções de pagamento </dl>
+
+      Serviço invocado:
+      * POST /cobr → cria a cobrança recorrente com os dados pertinentes sendo gerado um txid para conciliação; ou PUT /cobr/{txid} → cria a cobrança recorrente com os dados pertinentes já informando um txid para conciliação.
+
+      <dl> O PSP pagador realiza o pagamento das cobranças de forma automática, a partir das instruções de pagamento recebidas. </dl>
+
+      Serviço invocado:
+      * GET /cobr/{txid} → a qualquer momento este endpoint retorna os dados da cobrança com o Pix de pagamento correlato.
+
+      </blockquote>
+      <hr>
+
+      **Caso de Uso: Pagamento imediato via QR Code Composto com dados dinâmicos e recorrência**
+
+      **Aplicação** Prestadores de serviço, tipicamente de assinatura, em que o acesso ao serviço é disponibilizado imediatamente após o primeiro pagamento e as cobranças seguintes são realizadas periodicamente. Utilizado na <a href="pix-automatico#tag/jornada3">Jornada 3</a> de autorização do Pix Automático.
+
+      **Exemplos:** Academia, Escolas.
+
+      **Premissa:** deve existir uma recorrência já criada e ainda não autorizada.
+
+      <blockquote>
+      Caso de Uso: O usuário pagador deseja contratar um serviço de assinatura e entra em contato com o fornecedor informando que deseja realizar o pagamento das cobranças periódicas por meio do Pix Automático.
+
+      O fornecedor gera um QR Code composto, contendo duas locations: uma para a cobrança imediata inicial e outra para os parâmetros da recorrência de cobranças futuras.
+
+      Serviços invocados:
+      * Endpoints para criação de cobrança imediata, já exemplificados, de forma a haver a location para a cobrança com um txid que será compartilhado com a recorrência.
+      * POST /locrec → será retornado o identificador da “location” e a URL que será utilizada para exibir os parâmetros da recorrência.
+      * POST /rec → antes de mostrar o QR Code Composto ao usuário pagador, o usuário recebedor cria a recorrência com o identificador da “location” recebido do serviço anterior com todos os parâmetros da recorrência informando também o txid, via campo ‘ativacao.dadosJornada.txid’ no payload, que será conciliado com o txid idêntico da cobrança imediata a ser paga.
+      * GET /rec/{idRec}?txid={txid} → após a definição da location e criação da recorrência, nos endpoints anteriores, o usuário recebedor acessa este endpoint para obtenção dos dados de recorrência com o campo ‘dadosQR’ preenchido com a informação de jornada 3 e o Pix Copia e Cola correspondente ao QR Composto desejado para a exibição ao usuário pagador.
+
+
+      <dl> O usuário pagador lê esse QR Code no app do seu PSP e dá início a uma jornada em que se realizam, simultaneamente, o pagamento imediato inicial e a autorização para o pagamento das cobranças futuras por meio do Pix Automático.</dl>
+
+      <dl> Ao receber o primeiro pagamento imediato, o fornecedor disponibiliza instantaneamente o acesso ao serviço ao usuário pagador. </dl>
+
+      Serviço habilitados:
+      * POST /cobr ou PUT /cobr/{txid} → passam a ficar disponíveis para o usuário recebedor disparar as futuras cobranças recorrentes.
+
+      <dl>As demais cobranças periódicas são pagas automaticamente por meio do Pix Automático.</dl>
+      </blockquote>
+      <hr>
+
+      **Caso de Uso: Pagamento com vencimento via QR Code Composto com dados dinâmicos e recorrência**
+
+      **Aplicação:** Prestadores de serviço cuja cobrança se dá de forma periódica desejam ofertar a seus clientes a possibilidade de pagamento dessas cobranças por meio do Pix Automático. Corresponde à <a href="pix-automatico#tag/jornada4">Jornada 4</a> de autorização.
+
+      **Exemplos:** Empresas de Telefonia, água, luz.
+
+      **Premissa:** deve existir uma recorrência já criada e ainda não autorizada.
+
+      <blockquote>
+      Prestador de serviço que realiza cobranças de forma periódica por meio de QR Codes dinâmicos com vencimento, passa a gerar QR Codes compostos, contendo a location dos dados da cobrança com vencimento usual mais a location dos parâmetros da recorrência.
+
+      Serviços invocados:
+      * Endpoints para criação de cobrança com vencimento, já exemplificados, de forma a haver a location para a cobrança.
+      * POST /locrec → será retornado o identificador da “location” e a URL que será utilizada para exibir os parâmetros da recorrência.
+      * POST /rec → antes de mostrar o QR Code Composto ao usuário pagador, usuário recebedor cria a recorrência com o identificador da “location” recebido do serviço anterior com todos os parâmetros da recorrência.
+      * GET /rec/{idRec}?txid={txid} → após a definição da location e criação da recorrência, nos endpoints anteriores, o usuário recebedor acessa este endpoint para obtenção dos dados de recorrência com o campo ‘dadosQR’ preenchido com a informação de jornada 4 e o Pix Copia e Cola correspondente ao QR Composto desejado para a exibição ao usuário pagador.
+
+      <dl>O usuário pagador, ao ler esse QR Code composto utilizando o app do seu PSP, percorrerá a jornada usual de pagamento da cobrança com vencimento.</dl>
+
+      <dl>Ao final dessa jornada, o usuário pagador será questionado acerca do seu interesse em utilizar o Pix Automático para o pagamento das cobranças futuras referentes ao serviço em questão.</dl>
+
+      <dl>Caso tenha interesse, será apresentada ao pagador a jornada de autorização do Pix Automático, contendo todos os parâmetros da recorrência.</dl>
+
+      Serviço invocado:
+      * GET /rec/{recUrlAccessToken} → o Psp Pagador lê os dados da recorrência para controle e apresentação ao usuário pagador para aceite.
+
+      <dl>Confirmada a autorização pelo pagador, notifica-se o usuário recebedor e as cobranças seguintes são pagas automaticamente por meio do Pix Automático.</dl>
+      </blockquote>
+      <hr>
+
+      **Caso de Uso: Inclusão de recorrências**
+
+      **Aplicação:** usuários recebedores que desejam ofertar o pagamento via Pix Automático para seus clientes. A inclusão das recorrências é pré-requisito para o envio, aos clientes, de solicitações de autorização de pagamento usando o Pix Automático.
+
+      <blockquote>
+      O usuário recebedor, por meio do software de automação utilizado por ele, acessa a API Pix para a criação de uma recorrência, informando, dentre outras coisas, dados sobre o contrato vinculado às cobranças, o recebedor, a data de início das cobranças recorrentes, a periodicidade, e se a recorrência permite ou não retentativas após o vencimento.
+
+      Serviços invocados:
+      * POST /locrec → será retornado o identificador da “location” e a URL que será utilizada para exibir os parâmetros da recorrência.
+      * POST /rec → antes de mostrar o QR Code Composto ao usuário pagador, usuário recebedor cria a recorrência com o identificador da “location” recebido do serviço anterior com todos os parâmetros da recorrência.
+
+      <dl>Uma vez criada a recorrência, o usuário recebedor poderá enviar ao cliente solicitações de autorização de pagamento usando o Pix Automático por meio de QR Codes compostos (vide casos de uso da seção anterior) ou por meio do envio de uma solicitação de confirmação de recorrência.</dl>
+
+      Serviço invocado:
+      * POST /solicRec → o usuário recebedor envia uma solicitação de confirmação de recorrência informando o identificador da recorrência entre outros dados.
+      </blockquote>
+      <hr>
+
+      **Caso de Uso: Envio de solicitação de confirmação de recorrência**
+
+      **Aplicação:** usuários recebedores que tenham acordado diretamente com seus clientes que a forma de pagamento utilizada será o Pix Automático e desejam enviar o pedido de autorização para que o usuário pagador confirme pelo site ou app da sua instituição de relacionamento. Caracteriza a <a href="pix-automatico#tag/jornada1">Jornada 1</a> de autorização do Pix Automático.
+
+      **Premissa:** deve existir uma recorrência já criada e ainda não autorizada.
+
+      <blockquote>
+      O usuário recebedor, por meio do software de automação utilizado por ele, acessa a API Pix para a criação de uma solicitação de confirmação de recorrência, informando o identificador da recorrência criada previamente, a data de expiração da solicitação, a identificação do usuário pagador e os dados completos da conta transacional para a qual a solicitação de confirmação de recorrência será enviada.
+
+      Serviço invocado:
+      * POST /solicRec → o usuário recebedor envia uma solicitação de confirmação de recorrência informando o identificador da recorrência entre outros dados.
+
+      <dl>O PSP Recebedor envia ao PSP Pagador a solicitação correspondente, via mensageria.</dl>
+
+      <dl>O PSP Pagador valida os dados do cliente e, caso estejam corretos, armazena a solicitação na lista de solicitações pendentes do usuário pagador e o notifica.</dl>
+
+      <dl>O PSP Pagador apresenta ao usuário pagador, juntamente com alguns parâmetros adicionais de configuração, a solicitação de autorização de pagamentos recorrentes referentes àquela recorrência.</dl>
+      <dl>O usuário pagador define as configurações desejadas e autoriza o pagamento das cobranças do contrato em questão via Pix Automático.</dl>
+
+      <dl>O PSP Pagador armazena os dados da autorização e avisa o PSP Recebedor que a recorrência foi confirmada.</dl>
+
+      Serviço invocado:
+      * GET /solicRec/{idSolicRec} → a qualquer momento deste fluxo após o passo 1, o usuário recebedor pode consultar junto ao PSP Recebedor (fornecedor da API) a situação da solicitação.
+      </blockquote>
+      <hr>
+
+      **Caso de Uso: Cancelamento de recorrência**
+
+      **Aplicação:** usuários recebedores que desejam cancelar uma recorrência porque o contrato com o usuário pagador foi rescindido ou porque o usuário pagador gostaria de usar outra forma de pagamento.
+
+      **Premissas:** deve existir uma recorrência ativa vigente.
+
+      <blockquote>
+      O usuário recebedor, por meio do software de automação utilizado por ele, acessa a API Pix para solicitar o cancelamento de uma recorrência, informando o identificador da recorrência e o status Cancelada.
+
+      Serviço invocado:
+      * PATCH /rec/{idRec} → informando o status para ‘CANCELADA’.
+
+      <dl>O PSP Recebedor cancela a recorrência.</dl>
+
+      <dl>O PSP Recebedor envia informação sobre o cancelamento da recorrência ao PSP Pagador.</dl>
+
+      <dl>O PSP Pagador cancela a autorização vinculada à recorrência cancelada.</dl>
+      </blockquote>
+    </details>
+
+    ________________
+
+    ## **Resumo Técnico da API**
+
+    Se tiver dúvidas, consulte também a documentação técnica oficial da API de Pix Automático disponibilizada pelo BACEN neste link: __[Documentação Técnica da API de Pix Automático](https://bacen.github.io/pix-api/#/)__.
+
+    Fluxo de jornadas desta API:
+
+    | Jornadas                                                                      |
+    |:------------------------------------------------------------------------------:|
+    | [**Jornada 1**](pix-automatico#tag/jornada1/post/rec) |
+    ||
+    | [**Jornada 2**](pix-automatico#tag/jornada2/post/locrec) |
+    ||
+    | [**Jornada 3**](pix-automatico#tag/jornada3/post/locrec) |
+    ||
+    | [**Jornada 4**](pix-automatico#tag/jornada4/post/locrec) |
+
+    Todas as operações disponíveis para esta API:
+
+    | Operações                                                                      |
+    |:------------------------------------------------------------------------------:|
+    | **API de Recorrências** |
+    | [Criar recorrência](pix-automatico#tag/rec/post/rec)                            |
+    | [Consultar lista de recorrências](pix-automatico#tag/rec/get/rec) |
+    | [Consultar recorrência](pix-automatico#tag/rec/get/rec/{idRec})                      |
+    | [Revisar recorrência](pix-automatico#tag/rec/patch/rec/{idRec})                |
+    ||
+    | **API de Solicitações de Confirmação de Recorrência** |
+    | [Criar solicitação de confirmação de recorrência](pix-automatico#tag/solicrec/post/solicrec) |
+    | [Consultar solicitação de confirmação de recorrência](pix-automatico#tag/solicrec/get/solicrec/{idSolicRec}) |
+    | [Revisar solicitação de confirmação de recorrência](pix-automatico#tag/solicrec/patch/solicrec/{idSolicRec}) |
+    ||
+    | **API de Cobranças Recorrentes** |
+    | [Criar cobrança recorrente](pix-automatico#tag/cobr/post/cobr) |
+    | [Consultar cobrança recorrente](pix-automatico#tag/cobr/get/cobr) |
+    | [Revisar cobrança recorrente](pix-automatico#tag/cobr/patch/cobr/{txid}) |
+    | [Criar cobrança recorrente](pix-automatico#tag/cobr/post/cobr) |
+    | [Consultar cobrança recorrente](pix-automatico#tag/cobr/get/cobr) |
+    | [Solicitar rentativa de cobrança recorrente](pix-automatico#tag/cobr/post/cobr/{txid}/retentativa/{data}) |
+    ||
+    | **API de Locations do Payload** |
+    | [Criar location do payload](pix-automatico#tag/payloadlocationrec/post/locrec) |
+    | [Consultar locations do payload](pix-automatico#tag/payloadlocationrec/get/locrec) |
+    | [Consultar location do payload](pix-automatico#tag/payloadlocationrec/get/locrec/{id}) |
+    | [Desvincular recorrência de location do payload](pix-automatico#tag/payloadlocationrec/delete/locrec/{id}/idRec) |
+    ||
+    | [API de Recuperação de Payload](pix-automatico#tag/recpayload/get/rec/{recUrlAccessToken}) |
+    ||
+    | **API de Notificações (Webhook)** |
+    | [Configurar webhook de recorrência](pix-automatico#tag/webhook/put/webhookrec) |
+    | [Consultar webhook de recorrência](pix-automatico#tag/webhook/get/webhookrec) |
+    | [Cancelar webhook de recorrência](pix-automatico#tag/webhook/delete/webhookrec) |
+    | [Consultar webhook de cobranças recorrentes](pix-automatico#tag/webhook/get/webhookcobr) |
+    | [Consultar webhook de cobranças recorrentes](pix-automatico#tag/webhook/get/webhookcobr) |
+    | [Consultar webhook de cobranças recorrentes](pix-automatico#tag/webhook/get/webhookcobr) |
+
+    Endereço dos ambientes:
+
+    | Ambiente | Host                                 | Path                 |
+    |:--------:|------------------------------------- |----------------------|
+    | Sandbox  | https://baas-api-sandbox.c6bank.info | /v2/pix/             |
+    | Produção | https://baas-api.c6bank.info         | /v2/pix/             |
+servers:
+  - url: https://baas-api.c6bank.info/v2/pix
+    description: Servidor de produção
+  - url: https://baas-api-sandbox.c6bank.info/v2/pix
+    description: Servidor de sandbox
+tags:
+  - name: Jornada1
+    x-displayName: Jornada 1
+    description: >-
+      Gerenciamento da <b>Jornada 1</b> de Pix Automático.
+
+      <img src="/images/pix-automatico/jornadas-separadas/jornada01.png"
+      alt="JornadaSeparada">
+  - name: Jornada2
+    x-displayName: Jornada 2
+    description: >-
+      Gerenciamento da <b>Jornada 2</b> de Pix Automático.
+
+      <img src="/images/pix-automatico/jornadas-separadas/jornada02.png"
+      alt="JornadaSeparada">
+  - name: Jornada3
+    x-displayName: Jornada 3
+    description: >-
+      Gerenciamento da <b>Jornada 3</b> de Pix Automático.
+
+      <img src="/images/pix-automatico/jornadas-separadas/jornada03.png"
+      alt="JornadaSeparada">
+
+      **IMPORTANTE:** Caso deseje seguir com a jornada acima, é recomendado que
+      uma **cobrança imediata** já tenha sido criada.
+
+      Caso tenha dúvidas em como criar uma cobrança imediata, consulte a
+      documentação de PIX disponível em nosso portal. Você pode acessá‑la
+      através do __[link](https://developers.c6bank.com.br/apis/pix)__.
+  - name: Jornada4
+    x-displayName: Jornada 4
+    description: >-
+      Gerenciamento da <b>Jornada 4</b> de Pix Automático.
+
+      <img src="/images/pix-automatico/jornadas-separadas/jornada04.png"
+      alt="JornadaSeparada">
+
+      **IMPORTANTE:** Caso deseje seguir com a jornada acima, é recomendado que
+      uma **cobrança com vencimento** já tenha sido criada.
+
+      Caso tenha dúvidas em como criar uma cobrança com vencimento, consulte a
+      documentação de PIX disponível em nosso portal. Você pode acessá‑la
+      através do __[link](https://developers.c6bank.com.br/apis/pix)__.
+  - name: Rec
+    x-displayName: API de Recorrências
+    description: Gerenciamento de Recorrências.
+  - name: SolicRec
+    x-displayName: API de Solicitações de Confirmação de Recorrência
+    description: Gerenciamento de Solicitações de Confirmação de Recorrência.
+  - name: CobR
+    x-displayName: API de Cobranças Recorrentes
+    description: Gerenciamento de Cobranças Recorrentes.
+  - name: PayloadLocationRec
+    x-displayName: API de Locations do Payload
+    description: Gerenciamento de locations do payload.
+  - name: Webhook
+    x-displayName: Notificações (Webhook)
+    description: Gerenciamento de notificações de recorrências e cobranças
+      recorrentes por parte do PSP recebedor ao usuário recebedor.
+  - name: RecPayload
+    x-displayName: Rec Payload
+    description: Reune endpoints (locations) utilizados pelo software do PSP pagador
+      para recuperar o payload JSON que representa uma recorrência.
+paths:
+  /rec/{recUrlAccessToken}:
+    servers:
+      - url: https://qrcode.c6pix.com/public/v1/
+        description: Servidor de produção deste endpoint.
+    get:
+      parameters:
+        - name: recUrlAccessToken
+          in: path
+          required: true
+          schema:
+            type: string
+          examples:
+            default:
+              value: nqq9PyJRoitX5UI9YqQ2GOvHBrYJ2os9IfUmTv7dOU963040BA4
+      tags:
+        - RecPayload
+      summary: Rec Payload
+      description: |-
+        ## Endpoint (location) que serve um payload que representa uma recorrência.
+
+        No momento em que o usuário pagador efetua a leitura de um QR Code composto gerado pelo recebedor, esta URL será acessada e seu conteúdo consiste em uma estrutura JWS.
+        As informações sobre a segurança no acesso às urls encontram-se no Manual de Segurança do Pix disponível nesse __[link](https://www.bcb.gov.br/estabilidadefinanceira/comunicacaodados)__.
+
+        A API atual é pública e não está integrada aos endpoints do servidor do C6 Bank. Ela é realizada diretamente por meio do endereço apresentado quando um QR Code é gerado, disponível no campo "CopiaECola".
+
+        Exemplo: copiaEcola:  "00020101021226180014br.gov.bcb.pix5204000053039865802BR5903PIX6009SAO PAULO62070503***80980014br.gov.bcb.pix2576qrcode-h.c6pix.com/public/v1/rec/nqq9PyJRoitX5UI9YqQ2GOvHBrYJ2os9IfUmTv7dOU963040BA4",
+
+        Então, a URL do QR Code acima é: **https://qrcode-h.c6pix.com/public/v1/rec/nqq9PyJRoitX5UI9YqQ2GOvHBrYJ2os9IfUmTv7dOU**
+
+        Se deseja executar este endpoint em **homologação**, utilize esse endpoint:
+        https://qrcode-h.c6pix.com/public/v1/rec/{recUrlAccessToken}
+
+        Se deseja executar este endpoint em **produção**, utilize esse endpoint:
+        https://qrcode.c6pix.com/public/v1/rec/{recUrlAccessToken}
+      responses:
+        "200":
+          description: |-
+            # Descrição do Retorno
+            O retorno desse endpoint é um objeto que apresenta estrutura JWS, conforme especificado no manual de segurança. Segue um exemplo:
+
+            ```jws
+            eyJ4NXQjUzI1NiI6IkJOVkdUamZsRTVBaUplWGhHbTZSaGtGUXkwQ25pejJXSlF5cTZhQ0pnTFkiLCJqa3UiOiJodHRwczpcL1wvcXItaC5zYW5kYm94LnBpeC5iY2IuZ292LmJyXC9yZXN0XC9qd2tzLmpzb24iLCJraWQiOiJOMjROSVg5R3Z3bm4ycGktV09IOG9RQ2JkSGlaSFdpbnJvWllxZGhxMlYwUENJIiwiYWxnIjoiUlMyNTYifQ.eyJpZFJlYyI6IlJOMTIzNDU2NzgyMDI0MDExNTc3ODI1NDQ1NjEyIiwidmluY3VsbyI6eyJjb250cmF0byI6IjU1ODI2MTAiLCJkZXZlZG9yIjp7ImNwZiI6IjQ1MTY0NjMyNDgxIiwibm9tZSI6IkZ1bGFubyBkZSBUYWwifSwib2JqZXRvIjoiU2VydmnDp28gZGUgU3RyZWFtbWluZyBkZSBNw7pzaWNhLiJ9LCJjYWxlbmRhcmlvIjp7ImRhdGFGaW5hbCI6IjIwMjUtMDQtMDEiLCJkYXRhSW5pY2lhbCI6IjIwMjQtMDQtMDEiLCJwZXJpZGlvY2lkYWRlIjoiTUVOU0FMIn0sInBvbGl0aWNhUmV0ZW50YXRpdmEiOiJOQU9fUEVSTUlURSIsInZhbG9yIjp7InZhbG9yUmVjIjoiMzUuMDAifSwicmVjZWJlZG9yIjp7ImNucGoiOiIyODc2NTAwNzgwMjM3MSIsIm5vbWUiOiJTdGFydHVwIE11c2ljYWwiLCJpc3BiUGFydGljaXBhbnRlIjoiMTIzNDU2NzgifSwiYXR1YWxpemFjYW8iOlt7InN0YXR1cyI6IkNSSUFEQSIsImRhdGEiOiIyMDI0LTAzLTIwVDEwOjEyOjA3LjU2N1oifV19.JQ3nwpN75M7ADuFQD1lAYRU_3QIkU34OCGXcqmn0dmmvl_JYQggZDY-2cN9waqZtf0duJkDs9EcRu-pNZQZlNMjI7DCYCNfXOgiiofdQqMikDh-D6Zq82EkiUqS7cuTg1-GWylCTF9gH6-p_D-dhYPvf-s4FinbjZNwhkX8Sn-OhlLMS8roIWSMjo_J1hN4DdL-Q5zgZBb7Hbt4OZ3CnD1GNbnsdUUyPyy2GfmIUWZEnQ2rY7gVuI7chUAksYeZVaJiH34saBw4Ou8RjHbSGmeWFLmjiTSQYisyQEyotStu6GnHLS36ElNDVlZWOUnb87N3H5FAccWaIQhit3C4wmA
+            ```
+
+            Este objeto JWS assinado deve ser validado pelo pagador. Maiores detalhes técnicos a respeito da especificação
+            de segurança encontram-se no __[Manual de Segurança do Pix](https://www.bcb.gov.br/estabilidadefinanceira/pix)__.
+
+            Conforme pode-se verificar no exemplo acima, o objeto JWS apresenta três fragmentos separados pelo caractere `.` (ponto). São eles: `header`, `payload` e `signature`.
+
+            Em termos de funcionalidade, o fragmento que interessa ao pagador é o `payload`, que apresenta estrutura conforme especificada pelo `schema` do presente endpoint, contendo detalhes concernentes à recorrência.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecPayload"
+              examples:
+                response1:
+                  $ref: "#/components/examples/recPayload1"
+        "400":
+          description: Requisição com formato inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
+              examples:
+                exemplo1:
+                  $ref: "#/components/examples/RequisicaoInvalidaRecPayloadExample1"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+  /rec:
+    parameters:
+      - $ref: "#/components/parameters/Authorization"
+    post:
+      tags:
+        - Jornada1
+        - Rec
+        - Jornada2
+        - Jornada3
+        - Jornada4
+      summary: Criar recorrência.
+      requestBody:
+        $ref: "#/components/requestBodies/RecBody"
+      responses:
+        "201":
+          description: Recorrência criada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecGerada"
+              examples:
+                retorno1:
+                  $ref: "#/components/examples/recResponse1"
+                retorno2:
+                  $ref: "#/components/examples/recResponse2"
+        "400":
+          description: Requisição com formato inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
+              examples:
+                requisicao1:
+                  $ref: "#/components/examples/OperacaoInvalidaRecExample1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+    get:
+      parameters:
+        - in: query
+          name: inicio
+          required: true
+          schema:
+            $ref: "#/components/schemas/Inicio"
+        - in: query
+          name: fim
+          required: true
+          schema:
+            $ref: "#/components/schemas/Fim"
+        - name: cpf
+          in: query
+          schema:
+            type: string
+            title: CPF
+            pattern: /^\d{11}$/
+            description: Filtro pelo CPF do devedor. Não pode ser utilizado ao mesmo tempo
+              que o CNPJ.
+        - name: cnpj
+          in: query
+          schema:
+            type: string
+            title: CNPJ
+            pattern: ^[0-9A-Z]{14}$
+            description: Filtro pelo CNPJ do devedor. Não pode ser utilizado ao mesmo tempo
+              que o CPF.
+        - name: locationPresente
+          in: query
+          schema:
+            type: boolean
+        - name: status
+          in: query
+          schema:
+            type: string
+            title: Status do registro da recorrência
+            description: Filtro pelo status da recorrência.
+        - name: convenio
+          in: query
+          schema:
+            type: string
+            title: Convênio
+            maxLength: 60
+            description: Filtro pelo convênio associado.
+        - $ref: "#/components/parameters/paginaAtual"
+        - $ref: "#/components/parameters/itensPorPagina"
+        - $ref: "#/components/parameters/Authorization"
+      tags:
+        - Rec
+      summary: Consultar lista de recorrências.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecsConsultadas"
+              examples:
+                retorno1:
+                  $ref: "#/components/examples/getRec1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+  /rec/{idRec}:
+    parameters:
+      - name: idRec
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Id da location cadastrada para servir um payload
+      - $ref: "#/components/parameters/Authorization"
+    get:
+      tags:
+        - Rec
+        - Jornada2
+        - Jornada3
+        - Jornada4
+      parameters:
+        - name: txid
+          in: query
+          required: false
+          schema:
+            type: string
+            description: txId da cobrança associada à recorrência.
+        - $ref: "#/components/parameters/Authorization"
+      summary: Consultar recorrência.
+      responses:
+        "200":
+          description: Dados da recorrência.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecCompleta"
+              examples:
+                response1:
+                  $ref: "#/components/examples/recResponse3"
+                response2:
+                  $ref: "#/components/examples/recResponse4"
+                response3:
+                  $ref: "#/components/examples/recResponse5"
+                response4:
+                  $ref: "#/components/examples/recResponse6"
+                response5:
+                  $ref: "#/components/examples/recResponse7"
+                response6:
+                  $ref: "#/components/examples/recResponse8"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+    patch:
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+      tags:
+        - Rec
+      summary: Revisar recorrência.
+      requestBody:
+        $ref: "#/components/requestBodies/RecBodyRevisada"
+      responses:
+        "200":
+          description: Recorrência revisada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecGerada"
+              examples:
+                retorno1:
+                  $ref: "#/components/examples/recResponse1"
+        "400":
+          description: Requisição com formato inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
+              examples:
+                requisicao1:
+                  $ref: "#/components/examples/OperacaoInvalidaRecExample1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+  /solicrec:
+    post:
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+      tags:
+        - Jornada1
+        - SolicRec
+      summary: Criar solicitação de confirmação de recorrência.
+      description: Criar solicitação de confirmação de recorrência.
+      requestBody:
+        $ref: "#/components/requestBodies/SolicRecBody"
+      responses:
+        "201":
+          description: Solicitação de recorrência criada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolicRecCompleta"
+              examples:
+                response1:
+                  $ref: "#/components/examples/solicRecResponse1"
+        "400":
+          description: Requisição com formato inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
+              examples:
+                requisicao1:
+                  $ref: "#/components/examples/OperacaoInvalidaSolicRecExample1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+  /solicrec/{idSolicRec}:
+    parameters:
+      - name: idSolicRec
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id da solicitação da recorrência
+      - $ref: "#/components/parameters/Authorization"
+    get:
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+      tags:
+        - Jornada1
+        - SolicRec
+      summary: Consultar solicitação de confirmação de recorrência.
+      description: Consultar solicitação.
+      responses:
+        "200":
+          description: Dados da solicitação da recorrência.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolicRecCompleta"
+              examples:
+                response1:
+                  $ref: "#/components/examples/solicRecResponse1"
+                response2:
+                  $ref: "#/components/examples/solicRecResponse2"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+    patch:
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+      tags:
+        - SolicRec
+      summary: Revisar solicitação de confirmação de recorrência.
+      description: Revisar solicitação de confirmação de recorrência.
+      requestBody:
+        $ref: "#/components/requestBodies/SolicRecBodyRevisada"
+      responses:
+        "201":
+          description: Solicitação de recorrência atualizada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolicRecCompleta"
+              examples:
+                response1:
+                  $ref: "#/components/examples/solicRecResponse3"
+        "400":
+          description: Requisição com formato inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
+              examples:
+                requisicao1:
+                  $ref: "#/components/examples/OperacaoInvalidaSolicRecExample2"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+  /cobr/{txid}:
+    parameters:
+      - name: txid
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/TxId"
+      - $ref: "#/components/parameters/Authorization"
+    put:
+      tags:
+        - CobR
+      summary: Criar cobrança recorrente.
+      description: Endpoint para criar uma cobrança recorrente.
+      requestBody:
+        $ref: "#/components/requestBodies/CobRBody"
+      responses:
+        "201":
+          description: Cobrança imediata recorrente.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CobRGerada"
+              examples:
+                response1:
+                  $ref: "#/components/examples/cobRResponse2"
+        "400":
+          description: Requisição com formato inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
+              examples:
+                requisicao1:
+                  $ref: "#/components/examples/OperacaoInvalidaCobRExample1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+    patch:
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+      tags:
+        - CobR
+      summary: Revisar cobrança recorrente.
+      requestBody:
+        $ref: "#/components/requestBodies/CobRBodyRevisada"
+      responses:
+        "200":
+          description: Cobrança recorrente revisada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CobRGerada"
+              examples:
+                response1:
+                  $ref: "#/components/examples/cobRResponse4"
+        "400":
+          description: Requisição com formato inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
+              examples:
+                exemplo1:
+                  $ref: "#/components/examples/OperacaoInvalidaCobRExample2"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+    get:
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+      tags:
+        - CobR
+      summary: Consultar cobrança recorrente.
+      description: Endpoint para consultar uma cobrança recorrente através de um
+        determinado txid.
+      responses:
+        "200":
+          description: Dados da cobrança recorrente.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CobRCompleta"
+              examples:
+                response1:
+                  $ref: "#/components/examples/cobRResponse2"
+                response2:
+                  $ref: "#/components/examples/cobRResponse3"
+                response3:
+                  $ref: "#/components/examples/cobRResponse4"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+  /cobr:
+    post:
+      tags:
+        - CobR
+      summary: Criar cobrança recorrente.
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+      description: Endpoint para criar uma cobrança recorrente, neste caso, o txid
+        deve ser definido pelo PSP.
+      requestBody:
+        $ref: "#/components/requestBodies/CobRBody"
+      responses:
+        "201":
+          description: Cobrança recorrente criada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CobRGerada"
+              examples:
+                response1:
+                  $ref: "#/components/examples/cobRResponse1"
+        "400":
+          description: Requisição com formato inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
+              examples:
+                requisicao1:
+                  $ref: "#/components/examples/OperacaoInvalidaCobRExample1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+    get:
+      parameters:
+        - in: query
+          name: inicio
+          required: true
+          schema:
+            $ref: "#/components/schemas/Inicio"
+        - in: query
+          name: fim
+          required: true
+          schema:
+            $ref: "#/components/schemas/Fim"
+        - name: idRec
+          in: query
+          schema:
+            type: string
+            title: ID Recorrência
+            pattern: "[a-zA-Z0-9]{29}"
+            minLength: 29
+            maxLength: 29
+            description: Filtro pelo Identificador da Recorrência.
+        - name: cpf
+          in: query
+          schema:
+            type: string
+            title: CPF
+            pattern: /^\\d{11}$/
+            description: Filtro pelo CPF do devedor. Não pode ser utilizado ao mesmo tempo
+              que o CNPJ.
+        - name: cnpj
+          in: query
+          schema:
+            type: string
+            title: CNPJ
+            pattern: ^[0-9A-Z]{14}$
+            description: Filtro pelo CNPJ do devedor. Não pode ser utilizado ao mesmo tempo
+              que o CPF.
+        - name: status
+          in: query
+          schema:
+            type: string
+            title: Status do registro da cobrança recorrente.
+            description: Filtro pelo status da cobrança recorrente.
+        - name: convenio
+          in: query
+          schema:
+            type: string
+            title: Convênio
+            maxLength: 60
+            description: Filtro pelo convênio associado.
+        - $ref: "#/components/parameters/paginaAtual"
+        - $ref: "#/components/parameters/itensPorPagina"
+        - $ref: "#/components/parameters/Authorization"
+      tags:
+        - CobR
+      summary: Consultar lista de cobranças recorrentes.
+      description: Endpoint para consultar cobranças recorrentes através de parâmetros
+        como início, fim, idRec, cpf, cnpj, status e convênio.
+      responses:
+        "200":
+          description: Lista de cobranças recorrentes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CobsRConsultadas"
+              examples:
+                retorno1:
+                  $ref: "#/components/examples/getCobR1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+  /cobr/{txid}/retentativa/{data}:
+    parameters:
+      - name: txid
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/TxId"
+      - name: data
+        in: path
+        required: true
+        description: Data prevista para liquidação da ordem de pagamento correspondente.
+          Trata-se de uma data, no formato `YYYY-MM-DD`, segundo ISO 8601.
+        schema:
+          type: string
+          format: date
+          examples:
+            - 2023-04-01
+      - $ref: "#/components/parameters/Authorization"
+    post:
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+      tags:
+        - CobR
+      summary: Solicitar retentativa de cobrança.
+      description: Endpoint para solicitar retentativa de uma cobrança recorrente.
+      responses:
+        "201":
+          description: Cobrança recorrente.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - required:
+                      - tentativas
+                  - $ref: "#/components/schemas/CobRCompleta"
+              examples:
+                response1:
+                  $ref: "#/components/examples/cobRResponse3"
+        "400":
+          description: Requisição com formato inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
+              examples:
+                exemplo1:
+                  $ref: "#/components/examples/RequisicaoInvalidaCobRTentativaExample1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+  /locrec:
+    post:
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+      tags:
+        - Jornada2
+        - Jornada3
+        - Jornada4
+        - PayloadLocationRec
+      summary: Criar location do payload.
+      description: Criar location do payload
+      responses:
+        "201":
+          description: Dados da location do Payload.
+          headers:
+            location:
+              schema:
+                type: string
+                format: uri
+                title: Identificador da location criada.
+                description: Identificador da location criada.
+                examples:
+                  - pix.example.com/api/loc/1234567
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayloadLocationRecGerada"
+              examples:
+                response1:
+                  $ref: "#/components/examples/payloadLocationRecResponse2"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+    get:
+      parameters:
+        - in: query
+          name: inicio
+          required: true
+          schema:
+            $ref: "#/components/schemas/Inicio"
+        - in: query
+          name: fim
+          required: true
+          schema:
+            $ref: "#/components/schemas/Fim"
+        - name: idRecPresente
+          in: query
+          schema:
+            type: boolean
+        - name: convenio
+          in: query
+          schema:
+            type: string
+            title: Convênio
+            maxLength: 60
+            description: Filtro pelo convênio associado.
+        - $ref: "#/components/parameters/paginaAtual"
+        - $ref: "#/components/parameters/itensPorPagina"
+        - $ref: "#/components/parameters/Authorization"
+      tags:
+        - PayloadLocationRec
+      summary: Consultar locations cadastradas.
+      description: Endpoint para consultar locations cadastradas
+      responses:
+        "200":
+          description: Lista dos locations cadastrados de acordo com o critério de busca.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayloadLocationRecConsultadas"
+              examples:
+                getPayloadLocationsRec:
+                  $ref: "#/components/examples/getPayloadLocationRec1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+  /locrec/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Id da location cadastrada para servir um payload
+      - $ref: "#/components/parameters/Authorization"
+    get:
+      tags:
+        - PayloadLocationRec
+      summary: Recuperar location do payload.
+      description: Recupera a location do payload
+      responses:
+        "200":
+          description: Dados da location do Payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayloadLocationRecCompleta"
+              examples:
+                response1:
+                  $ref: "#/components/examples/payloadLocationRecResponse1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+  /locrec/{id}/idRec:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Id da location cadastrada para servir um payload
+      - $ref: "#/components/parameters/Authorization"
+    delete:
+      tags:
+        - PayloadLocationRec
+      summary: Desvincular uma recorrência de uma location.
+      description: >-
+        Endpoint utilizado para desvincular uma recorrência de uma location.
+
+
+        Se executado com sucesso, a entidade `loc` não apresentará mais uma
+        recorrência,
+
+        se apresentava anteriormente à chamada. Adicionalmente, a entidade
+        associada ao
+
+        recurso desvinculado também passará a não mais apresentar um _location_.
+        Esta operação
+
+        não altera o `status` do recurso em questão.
+      responses:
+        "200":
+          description: Entidade representada pelo recurso informado desvinculada com
+            sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayloadLocationRecCompleta"
+              examples:
+                response1:
+                  $ref: "#/components/examples/payloadLocationRecResponse2"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+  /webhookrec:
+    put:
+      tags:
+        - Webhook
+        - Jornada2
+        - Jornada3
+        - Jornada4
+      summary: Configurar webhook de recorrências
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+      description: Endpoint para configuração do serviço de notificações acerca de
+        recorrências. Somente recorrências associadas ao usuário recebedor serão
+        notificadas.
+      requestBody:
+        $ref: "#/components/requestBodies/WebhookRecConfigBody"
+      responses:
+        "200":
+          description: Webhook para notificações.
+        "400":
+          description: Requisição com formato inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
+              examples:
+                exemplo1:
+                  $ref: "#/components/examples/RequisicaoInvalidaWebhookExample1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+    get:
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+      tags:
+        - Webhook
+      summary: Consultar webhook de recorrências
+      description: Endpoint para consulta de informações sobre o webhook de recorrências.
+      responses:
+        "200":
+          description: Dados do webhook
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookRecCompleto"
+              examples:
+                response1:
+                  $ref: "#/components/examples/recWebhookResponse1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+    delete:
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+      tags:
+        - Webhook
+      summary: Cancelar webhook de recorrências
+      description: Endpoint para cancelamento do webhook de recorrências.
+      responses:
+        "204":
+          description: Webhook para notificações foi cancelado.
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+  /webhookcobr:
+    put:
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+      tags:
+        - Webhook
+      summary: Configurar webhook de cobranças recorrentes
+      description: Endpoint para configuração do serviço de notificações acerca de
+        cobranças recorrentes. Somente cobranças recorrentes associadas ao
+        usuário recebedor serão notificadas.
+      requestBody:
+        $ref: "#/components/requestBodies/WebhookCobRConfigBody"
+      responses:
+        "200":
+          description: Webhook para notificações.
+        "400":
+          description: Requisição com formato inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
+              examples:
+                exemplo1:
+                  $ref: "#/components/examples/RequisicaoInvalidaWebhookExample1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+    get:
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+      tags:
+        - Webhook
+      summary: Consultar webhook de cobranças recorrentes
+      description: Endpoint para consulta de informações sobre o webhook de cobranças
+        recorrentes.
+      responses:
+        "200":
+          description: Dados do webhook.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookCobRCompleto"
+              examples:
+                response1:
+                  $ref: "#/components/examples/cobRWebhookResponse1"
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+    delete:
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+      tags:
+        - Webhook
+      summary: Cancelar webhook de cobranças recorrentes
+      description: Endpoint para cancelamento do webhook de cobranças recorrentes.
+      responses:
+        "204":
+          description: Webhook para notificações foi cancelado.
+        "403":
+          $ref: "#/components/responses/AcessoNegado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicoIndisponivel"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  examples:
+    cobRBody1:
+      summary: Exemplo de criação de cobrança recorrente 1
+      value:
+        idRec: RR1234567820240115abcdefghijk
+        infoAdicional: Serviços de Streamming de Música e Filmes.
+        calendario:
+          dataDeVencimento: 2024-04-15
+        valor:
+          original: "106.07"
+        ajusteDiaUtil: true
+        devedor:
+          cep: 89256-140
+          cidade: Uberlândia
+          email: sebastiao.tavares@mail.com
+          logradouro: Alameda Franco 1056
+          uf: MG
+        recebedor:
+          agencia: "9708"
+          conta: "012682"
+          tipoConta: CORRENTE
+    cobRBody2:
+      summary: Exemplo de revisão de cobrança recorrente 1
+      value:
+        status: CANCELADA
+    cobRResponse1:
+      summary: Exemplo de cobrança recorrente 1
+      value:
+        idRec: RR1234567820240115abcdefghijk
+        txid: 3136957d93134f2184b369e8f1c0729d
+        infoAdicional: Serviços de Streamming de Música e Filmes.
+        calendario:
+          criacao: 2024-04-01
+          dataDeVencimento: 2024-04-15
+        status: CRIADA
+        valor:
+          original: "106.07"
+        politicaRetentativa: PERMITE_3R_7D
+        ajusteDiaUtil: true
+        devedor:
+          cep: 89256-140
+          cidade: Uberlândia
+          email: sebastiao.tavares@mail.com
+          logradouro: Alameda Franco 1056
+          uf: MG
+        recebedor:
+          agencia: "9708"
+          conta: "012682"
+          tipoConta: CORRENTE
+        atualizacao:
+          - data: 2024-04-01T14:47:29.470Z
+            status: CRIADA
+    cobRResponse2:
+      summary: Exemplo de cobrança recorrente 1
+      value:
+        idRec: RR1234567820240115abcdefghijk
+        txid: 3136957d93134f2184b369e8f1c0729d
+        infoAdicional: Serviços de Streamming de Música e Filmes.
+        calendario:
+          criacao: 2024-04-01
+          dataDeVencimento: 2024-04-15
+        valor:
+          original: "106.07"
+        status: CRIADA
+        politicaRetentativa: PERMITE_3R_7D
+        ajusteDiaUtil: true
+        devedor:
+          cep: 89256-140
+          cidade: Uberlândia
+          email: sebastiao.tavares@mail.com
+          logradouro: Alameda Franco 1056
+          uf: MG
+        recebedor:
+          agencia: "9708"
+          conta: "012682"
+          tipoConta: CORRENTE
+        atualizacao:
+          - data: 2024-04-01T14:47:29.470Z
+            status: CRIADA
+    cobRResponse3:
+      summary: Exemplo de cobrança recorrente 2
+      value:
+        idRec: RR123456782024061999000566354
+        txid: 7f733863543b4a16b516d839bd4bc34e
+        calendario:
+          criacao: 2024-05-20
+          dataDeVencimento: 2024-06-20
+        valor:
+          original: "50.33"
+        status: ATIVA
+        politicaRetentativa: PERMITE_3R_7D
+        ajusteDiaUtil: true
+        devedor:
+          cep: 63259-740
+          cidade: Campinas
+          email: beltrano.silva@mail.com
+          logradouro: Rua Gonçalves Dias 605
+          uf: SP
+        recebedor:
+          cnpj: "58966551101210"
+          conta: "997182"
+          tipoConta: CORRENTE
+        tentativas:
+          - dataLiquidacao: 2024-06-22
+            tipo: AGND
+            endToEndId: E12345678202406201221abcdef12345
+            status: EXPIRADA
+          - dataLiquidacao: 2024-06-24
+            tipo: NTAG
+            endToEndId: E12345678202406201221abcdef12345
+            status: AGENDADA
+        atualizacao:
+          - data: 2024-05-20T14:47:29.470Z
+            status: CRIADA
+          - data: 2024-05-21T10:18:20.120Z
+            status: ATIVA
+    cobRResponse4:
+      summary: Exemplo de cobrança recorrente 3
+      value:
+        idRec: RN985156112024071999000566354
+        txid: 517bd858b59d458a841280b0f0a60bfa
+        calendario:
+          criacao: 2024-05-20
+          dataDeVencimento: 2024-06-20
+        valor:
+          original: "210.00"
+        status: CANCELADA
+        politicaRetentativa: NAO_PERMITE
+        ajusteDiaUtil: true
+        devedor:
+          cep: 26901-340
+          cidade: São Luís
+          email: fulano.tal@mail.com
+          logradouro: Alameda Cardoso 1007
+          uf: MA
+        recebedor:
+          cnpj: "31166575201770"
+          conta: "107262"
+          nome: Empresa de Telecomunicações SA
+          tipoConta: POUPANÇA
+        tentativas:
+          - dataLiquidacao: 2024-06-20
+            tipo: AGND
+            endToEndId: E12345678202406201221abcdef12345
+            status: CANCELADA
+        encerramento:
+          cancelamento:
+            solicitante: USUARIO_RECEBEDOR
+            codigo: SLCR
+            descricao: Cancelamento de agendamento solicitado pelo usuário recebedor
+        atualizacao:
+          - data: 2024-05-20T14:47:29.470Z
+            status: CRIADA
+          - data: 2024-05-21T10:18:20.120Z
+            status: ATIVA
+          - data: 2024-05-26T10:18:20.120Z
+            status: CANCELADA
+    recBody1:
+      summary: Exemplo de Recorrência 1
+      value:
+        vinculo:
+          contrato: "63100862"
+          devedor:
+            cpf: "45164632481"
+            nome: Fulano de Tal
+          objeto: Serviço de Streamming de Música.
+        calendario:
+          dataFinal: 2025-04-01
+          dataInicial: 2024-04-01
+          periodicidade: MENSAL
+        valor:
+          valorRec: "35.00"
+        politicaRetentativa: NAO_PERMITE
+        loc: 108
+        ativacao:
+          dadosJornada:
+            txid: 33beb661beda44a8928fef47dbeb2dc5
+    recBody2:
+      summary: Exemplo de Recorrência 2
+      value:
+        vinculo:
+          contrato: "998782003"
+          devedor:
+            cpf: "02989131415"
+            nome: Beltrano da Silva
+          objeto: Serviço de Plano de Saúde.
+        calendario:
+          dataInicial: 2024-10-10
+          periodicidade: ANUAL
+        valor:
+          valorMinimoRecebedor: "5000.00"
+        politicaRetentativa: PERMITE_3R_7D
+    recBody3:
+      summary: Exemplo de Revisão de Recorrência 1
+      value:
+        loc: 108
+        vinculo:
+          devedor:
+            nome: Fulano de Tal
+        calendario:
+          dataInicial: 2024-04-01
+        ativacao:
+          dadosJornada:
+            txid: 33beb661beda44a8928fef47dbeb2dc5
+    recResponse1:
+      summary: Exemplo de Recorrência 1
+      value:
+        idRec: RN1234567820240115abcdefghijk
+        vinculo:
+          contrato: "63100862"
+          devedor:
+            cpf: "45164632481"
+            nome: Fulano de Tal
+          objeto: Serviço de Streamming de Música.
+        calendario:
+          dataFinal: 2025-04-01
+          dataInicial: 2024-04-01
+          periodicidade: MENSAL
+        politicaRetentativa: NAO_PERMITE
+        recebedor:
+          cnpj: "01602606113708"
+          nome: Empresa de Serviços SA
+        valor:
+          valorRec: "35.00"
+        status: CRIADA
+        loc:
+          criacao: 2023-12-10T07:10:05.115Z
+          id: 108
+          location: pix.example.com/qr/v2/rec/2353c790eefb11eaadc10242ac120002
+          idRec: RN1234567820240115abcdefghijk
+        ativacao:
+          dadosJornada:
+            tipoJornada: JORNADA_3
+            txid: 33beb661beda44a8928fef47dbeb2dc5
+        atualizacao:
+          - data: 2023-12-19T12:28:05.230Z
+            nome: CRIADA
+    recResponse2:
+      summary: Exemplo de Recorrência 2
+      value:
+        idRec: RR1234567820240115abcdefghijk
+        vinculo:
+          contrato: "998782003"
+          devedor:
+            cpf: "02989131415"
+            nome: Beltrano da Silva
+          objeto: Serviço de Plano de Saúde.
+        calendario:
+          dataInicial: 2024-10-10
+          periodicidade: ANUAL
+        politicaRetentativa: PERMITE_3R_7D
+        recebedor:
+          cnpj: "09172302153900"
+          nome: Empresa de Serviços de Saúde SA
+        valor:
+          valorMinimoRecebedor: "5000.00"
+        status: CRIADA
+        atualizacao:
+          - data: 2024-01-11T10:27:01.280Z
+            nome: CRIADA
+    recResponse3:
+      summary: Exemplo de Recorrência Completa com Dados QR Jornada 2
+      value:
+        idRec: RN1234567820240115abcdefghijk
+        status: APROVADA
+        valor:
+          valorRec: "300.00"
+        vinculo:
+          contrato: "98625023"
+          devedor:
+            cpf: "87734514122"
+            nome: Fulano de Tal
+          objeto: Serviços de Gestão de Imóveis
+        calendario:
+          dataFinal: 2028-09-01
+          dataInicial: 2024-02-01
+          periodicidade: MENSAL
+        politicaRetentativa: NAO_PERMITE
+        loc:
+          criacao: 2023-12-19T12:28:05.230Z
+          id: 5100
+          location: pix.example.com/qr/v2/rec/2353c790eefb11eaadc10242ac120002
+          idRec: RN1234567820240115abcdefghijk
+        pagador:
+          codMun: "2673833"
+          cpf: "75633122216"
+          ispbParticipante: "81102623"
+        recebedor:
+          cnpj: "92221288310574"
+          nome: Imobiliária Bom Sucesso
+        atualizacao:
+          - data: 2024-01-03T08:30:02.050Z
+            nome: CRIADA
+          - data: 2024-01-04T09:40:42.210Z
+            nome: APROVADA
+        dadosQR:
+          jornada: JORNADA_2
+          pixCopiaECola: 00020126180014br.gov.bcb.pix5204000053039865802BR5913Fulano de
+            Tal6008BRASILIA62070503***80800014br.gov.bcb.pix2558pix.example.com/qr/v2/rec/2353c790eefb11eaadc10242ac120002630462C9
+    recResponse4:
+      summary: Exemplo de Recorrência Completa Jornada 1
+      value:
+        idRec: RR7784567820240528123defgh775
+        status: CRIADA
+        valor:
+          valorRec: "250.00"
+        vinculo:
+          contrato: "9612389"
+          devedor:
+            cpf: "45832633800"
+            nome: Alfredo Tavares
+          objeto: Serviços Esportivos
+        calendario:
+          dataFinal: 2028-09-01
+          dataInicial: 2024-02-01
+          periodicidade: MENSAL
+        politicaRetentativa: PERMITE_3R_7D
+        pagador:
+          codMun: "1509873"
+          cpf: "45832633800"
+          ispbParticipante: "52780028"
+        recebedor:
+          cnpj: "56958712500811"
+          nome: Academia Saúde
+        atualizacao:
+          - data: 2024-01-03T08:30:02.050Z
+            nome: CRIADA
+    recResponse5:
+      summary: Exemplo de Recorrência Completa Jornada 1 com Cancelamento
+      value:
+        idRec: RR1026652320240821lab77511abf
+        status: CANCELADA
+        valor:
+          valorMinimoRecebedor: "800.00"
+        vinculo:
+          contrato: "298620560"
+          devedor:
+            cpf: "12600511100"
+            nome: Sebastião Silva
+          objeto: Faculdade de Engenharia
+        calendario:
+          dataFinal: 2027-09-01
+          dataInicial: 2024-10-01
+          periodicidade: MENSAL
+        politicaRetentativa: PERMITE_3R_7D
+        pagador:
+          codMun: "1509873"
+          cpf: "12600511100"
+          ispbParticipante: "52780028"
+        recebedor:
+          cnpj: "61593007802371"
+          nome: Universidade Brasileira
+        encerramento:
+          cancelamento:
+            solicitante: USUARIO_RECEBEDOR
+            codigo: SLCR
+            descricao: Cancelamento solicitado pelo usuário recebedor
+        atualizacao:
+          - data: 2024-08-03T08:30:02.050Z
+            nome: CRIADA
+          - data: 2024-09-06T09:11:42.205Z
+            nome: APROVADA
+          - data: 2024-10-06T15:05:33.305Z
+            nome: CANCELADA
+        ativacao:
+          tipoJornada: JORNADA_1
+    recResponse6:
+      summary: Exemplo de Recorrência Completa com Dados QR Jornada 3
+      value:
+        idRec: RN1234567820241203fghijkabcde
+        status: CRIADA
+        valor:
+          valorRec: "150.00"
+        vinculo:
+          contrato: "5582610"
+          devedor:
+            cpf: "45164632481"
+            nome: Fulano de Tal
+          objeto: Serviços de Gestão de Imóveis
+        calendario:
+          dataFinal: 2028-09-01
+          dataInicial: 2025-02-01
+          periodicidade: MENSAL
+        politicaRetentativa: NAO_PERMITE
+        loc:
+          criacao: 2024-10-01T10:15:01.115Z
+          id: 2726
+          location: pix.example.com/qr/v2/rec/94ed2badcbc04c15b0bb7fa353194890
+          idRec: RN1234567820241203fghijkabcde
+        recebedor:
+          cnpj: "12345678000195"
+          nome: Empresa de Serviços SA
+        atualizacao:
+          - data: 2024-12-03T08:30:02.050Z
+            nome: CRIADA
+        dadosQR:
+          jornada: JORNADA_3
+          pixCopiaECola: 00020101021226760014br.gov.bcb.pix2554pix.example.com/qr/v2/8b3da2f39a4140d1a91abd93113bd4415204000053039865802BR5913Fulano
+            de
+            Tal6008BRASILIA62070503***80800014br.gov.bcb.pix2558pix.example.com/qr/v2/rec/94ed2badcbc04c15b0bb7fa35319489063047741
+    recResponse7:
+      summary: Exemplo de Recorrência Completa com Dados QR Jornada 4
+      value:
+        idRec: RN1234567820241130lkwdefghijk
+        status: CRIADA
+        valor:
+          valorRec: "210.00"
+        vinculo:
+          contrato: "11750023"
+          devedor:
+            cpf: "75633122216"
+            nome: Francisco da Silva
+          objeto: Assinatura de Serviços de Transporte
+        calendario:
+          dataFinal: 2026-12-01
+          dataInicial: 2025-03-01
+          periodicidade: MENSAL
+        politicaRetentativa: NAO_PERMITE
+        loc:
+          criacao: 2024-05-19T10:28:05.230Z
+          id: 6153
+          location: pix.example.com/qr/v2/rec/3ffa640fa4f14080adccb949fa2dc0d0
+          idRec: RN1234567820241130lkwdefghijk
+        recebedor:
+          cnpj: "56989000019533"
+          nome: Empresa de Logística SA
+        atualizacao:
+          - data: 2024-11-30T08:30:02.050Z
+            nome: CRIADA
+        dadosQR:
+          jornada: JORNADA_4
+          pixCopiaECola: 00020101021226810014br.gov.bcb.pix2559pix.example.com/qr/v2/cobv/1e6c54d3ec9449b7a7fc53b6b0f998e75204000053039865802BR5913Fulano
+            de
+            Tal6008BRASILIA62070503***80800014br.gov.bcb.pix2558pix.example.com/qr/v2/rec/3ffa640fa4f14080adccb949fa2dc0d06304A441
+    recResponse8:
+      summary: Exemplo de Recorrência Completa Jornada 1 com Convênio
+      value:
+        idRec: RR3781267820250201123deabc339
+        status: CRIADA
+        valor:
+          valorRec: "170.00"
+        vinculo:
+          contrato: "1793651"
+          devedor:
+            cpf: "01536985566"
+            nome: Fulano de Tal
+          objeto: Serviços de Telefonia
+        calendario:
+          dataFinal: 2028-03-01
+          dataInicial: 2025-03-01
+          periodicidade: MENSAL
+        politicaRetentativa: NAO_PERMITE
+        pagador:
+          codMun: "1509873"
+          cpf: "45832633800"
+          ispbParticipante: "52780028"
+        recebedor:
+          convenio: Master
+          cnpj: "56958712500811"
+          nome: Academia Saúde
+        atualizacao:
+          - data: 2025-02-01T08:30:02.050Z
+            nome: CRIADA
+    recWebhookNotification1:
+      summary: Exemplo de Notificação de Recorrência 1
+      value:
+        recs:
+          - idRec: RR1026652320240821lab77511abf
+            status: APROVADA
+            atualizacao:
+              - status: CRIADA
+                data: 2024-08-20T10:12:07.567Z
+              - status: APROVADA
+                data: 2024-08-22T12:43:53.337Z
+            ativacao:
+              tipoJornada: JORNADA_3
+              dadosJornada:
+                txid: r9eFIFmwcZ55Nm4RsKZAAtIvvCrlcNN6
+    recPayload1:
+      summary: Exemplo de payload de recorrência 1
+      value:
+        idRec: RN123456782024011577825445612
+        vinculo:
+          contrato: "5582610"
+          devedor:
+            cpf: "45164632481"
+            nome: Fulano de Tal
+          objeto: Serviço de Streamming de Música.
+        calendario:
+          dataFinal: 2025-04-01
+          dataInicial: 2024-04-01
+          periodicidade: MENSAL
+        politicaRetentativa: NAO_PERMITE
+        valor:
+          valorRec: "35.00"
+        recebedor:
+          cnpj: "28765007802371"
+          nome: Startup Musical
+          ispbParticipante: "12345678"
+        atualizacao:
+          - status: CRIADA
+            data: 2024-03-20T10:12:07.567Z
+    solicRecBody1:
+      summary: Exemplo de criação de solicitação de confirmação de recorrência 1
+      value:
+        idRec: RN123456782024011577825445612
+        calendario:
+          dataExpiracaoSolicitacao: 2023-12-20T12:17:11.926Z
+        destinatario:
+          agencia: "2569"
+          conta: "550689"
+          cpf: "15231470190"
+          ispbParticipante: "91193552"
+    solicRecBody2:
+      summary: Exemplo de revisão de solicitação de confirmação de recorrência 1
+      value:
+        status: CANCELADA
+    solicRecResponse1:
+      summary: Exemplo de solicitação de confirmação de recorrência 1
+      value:
+        idSolicRec: SC876456782024021577825445312
+        idRec: RN123456782024011577825445612
+        calendario:
+          dataExpiracaoSolicitacao: 2023-12-20T12:17:11.926Z
+        status: CRIADA
+        destinatario:
+          agencia: "2569"
+          conta: "550689"
+          cpf: "15231470190"
+          ispbParticipante: "91193552"
+        atualizacao:
+          - data: 2023-12-20T12:18:18.618Z
+            status: CRIADA
+        recPayload:
+          idRec: RN123456782024011577825445612
+          vinculo:
+            contrato: "561238008"
+            devedor:
+              cpf: "15231470190"
+              nome: Fulano de Tal
+            objeto: Serviços de Telecomunicações
+          calendario:
+            dataFinal: 2023-12-01
+            dataInicial: 2024-04-01
+            periodicidade: MENSAL
+          recebedor:
+            cnpj: "94370926517368"
+            nome: Empresa de Serviços SA
+          valor:
+            valorRec: "1200.09"
+          atualizacao:
+            - data: 2023-12-15T08:30:07.115Z
+              status: CRIADA
+    solicRecResponse2:
+      summary: Exemplo de solicitação de confirmação de recorrência 2
+      value:
+        idSolicRec: SC875116782024021577820565312
+        idRec: RR692350012024051502650081069
+        calendario:
+          dataExpiracaoSolicitacao: 2024-12-15T12:17:11.926Z
+        status: REJEITADA
+        destinatario:
+          agencia: "1179"
+          conta: "73851"
+          cpf: "07031470825"
+          ispbParticipante: "91193552"
+        atualizacao:
+          - data: 2024-12-15T12:18:18.618Z
+            status: CRIADA
+          - data: 2024-12-15T16:18:18.618Z
+            status: ENVIADA
+          - data: 2024-12-16T08:50:18.268Z
+            status: REJEITADA
+        recPayload:
+          idRec: RR692350012024051502650081069
+          vinculo:
+            contrato: Assinatura Individual
+            devedor:
+              cpf: "07031470825"
+              nome: Sebastião Silva
+            objeto: Serviços de Entrega de Alimentos
+          valor:
+            valorMinimoRecebedor: "300.00"
+          calendario:
+            dataFinal: 2025-05-01
+            dataInicial: 2024-12-01
+            periodicidade: MENSAL
+          recebedor:
+            cnpj: "25603926517008"
+            nome: Empresa de Produtos Alimentícios SA
+          atualizacao:
+            - data: 2023-12-08T16:24:35.233Z
+              status: CRIADA
+    solicRecResponse3:
+      summary: Exemplo de solicitação de confirmação de recorrência 1
+      value:
+        idSolicRec: SC876456782024021577825445312
+        idRec: RN123456782024011577825445612
+        calendario:
+          dataExpiracaoSolicitacao: 2024-06-11T07:17:11.008Z
+        status: CANCELADA
+        destinatario:
+          agencia: "2569"
+          conta: "550689"
+          cpf: "15231470190"
+          ispbParticipante: "91193552"
+        atualizacao:
+          - data: 2024-05-16T17:01:06.781Z
+            status: CRIADA
+          - data: 2024-05-30T10:18:18.618Z
+            status: CANCELADA
+        recPayload:
+          idRec: RN123456782024011577825445612
+          vinculo:
+            contrato: Banda Larga Fibra Ã“tica
+            devedor:
+              cpf: "15231470190"
+              nome: Fulano de Tal
+            objeto: Serviços de Telecomunicações
+          valor:
+            valorRec: "1200.09"
+          calendario:
+            dataFinal: 2025-05-01
+            dataInicial: 2024-05-01
+            periodicidade: MENSAL
+          recebedor:
+            cnpj: "94370926517368"
+            nome: Empresa de Serviços SA
+          atualizacao:
+            - data: 2023-12-08T16:24:35.233Z
+              status: CRIADA
+    payloadLocationBody1:
+      summary: Exemplo de Payload Location 1
+      value:
+        tipoCob: cob
+    payloadLocationBody2:
+      summary: Exemplo de Payload Location 2
+      value:
+        tipoCob: cobv
+    payloadLocationResponse1:
+      summary: Exemplo de Payload Location 1
+      value:
+        id: 7716
+        txid: fda9460fe04e4f129b72863ae57ee22f
+        location: pix.example.com/qr/v2/cobv/2353c790eefb11eaadc10242ac120002
+        tipoCob: cobv
+        criacao: 2020-03-11T21:19:51.013Z
+    payloadLocationResponse2:
+      summary: Exemplo de Payload Location 2
+      value:
+        id: 856
+        txid: 31e08604f9ce459bb59672332af8d672
+        location: pix.example.com/qr/v2/cobv/39c9f435c6324867aa1dec1260e1127c
+        tipoCob: cobv
+        criacao: 2020-02-10T19:22:52.013Z
+    payloadLocationResponse3:
+      summary: Exemplo de Payload Location 3
+      value:
+        id: 2316
+        txid: eb9d87f36fca4c92b7d5ec48e2ee3853
+        location: pix.example.com/qr/v2/a8534e273ecb47d3ac30613104544466
+        tipoCob: cob
+        criacao: 2020-05-31T19:39:54.013Z
+    payloadLocationResponse4:
+      summary: Exemplo de Payload Location 3
+      value:
+        id: 2316
+        location: pix.example.com/qr/v2/a8534e273ecb47d3ac30613104544466
+        tipoCob: cob
+        criacao: 2020-05-31T19:39:54.013Z
+    payloadLocationResponse5:
+      summary: Exemplo de Payload Location 1
+      value:
+        id: 7716
+        location: pix.example.com/qr/v2/2353c790eefb11eaadc10242ac120002
+        tipoCob: cob
+        criacao: 2020-03-11T21:19:51.013Z
+    payloadLocationResponse6:
+      summary: Exemplo de Payload Location 2
+      value:
+        id: 856
+        location: pix.example.com/qr/v2/cobv/39c9f435c6324867aa1dec1260e1127c
+        tipoCob: cobv
+        criacao: 2020-02-10T19:22:52.013Z
+    payloadLocationRecResponse1:
+      summary: Exemplo de Payload Location de Recorrência 1
+      value:
+        id: 12069
+        location: pix.example.com/qr/v2/rec/2353c790eefb11eaadc10242ac120002
+        criacao: 2023-12-20T12:38:28.774Z
+        idRec: RR123456782024011510056892226
+    payloadLocationRecResponse2:
+      summary: Exemplo de Payload Location de Recorrência 1
+      value:
+        id: 12069
+        location: pix.example.com/qr/v2/rec/2353c790eefb11eaadc10242ac120002
+        criacao: 2023-12-20T12:38:28.774Z
+    recWebhookBody1:
+      summary: Exemplo de criação de webhook de recorrência
+      value:
+        webhookUrl: https://usuario.recebedor.com/api/webhookrec/
+    recWebhookResponse1:
+      summary: Exemplo de webhook de recorrência
+      value:
+        webhookUrl: https://usuario.recebedor.com/api/webhookrec/
+        criacao: 2023-12-20T12:51:16.485Z
+    cobRWebhookBody1:
+      summary: Exemplo de criação de webhook de cobrança recorrente
+      value:
+        webhookUrl: https://usuario.recebedor.com/api/webhookcobr/
+    cobRWebhookResponse1:
+      summary: Exemplo de webhook de cobrança recorrente
+      value:
+        webhookUrl: https://usuario.recebedor.com/api/webhookcobr/
+        criacao: 2023-12-20T12:51:16.485Z
+    cobRWebhookNotification1:
+      summary: Exemplo de webhook de cobrança recorrente
+      value:
+        cobsr:
+          - idRec: RR1234567820240115abcdefghijk
+            txid: 3136957d93134f2184b369e8f1c0729d
+            status: ATIVA
+            atualizacao:
+              - status: ATIVA
+                data: 2024-08-20T12:34:21.300Z
+            tentativas:
+              - dataLiquidacao: 2024-20-08
+                tipo: AGND
+                status: SOLICITADA
+                endToEndId: E12345678202406201221abcdef12345
+    getWebhook1:
+      summary: Exemplo de retorno da consulta de Webhooks 1
+      value:
+        parametros:
+          inicio: 2020-04-01T00:00:00Z
+          fim: 2020-04-01T23:59:59Z
+          paginacao:
+            paginaAtual: 0
+            itensPorPagina: 100
+            quantidadeDePaginas: 1
+            quantidadeTotalDeItens: 1
+        webhooks:
+          - allOf:
+              - $ref: "#/components/examples/recWebhookResponse1"
+    getWebhookRec1:
+      summary: Exemplo de retorno da consulta de Webhooks 1
+      value:
+        parametros:
+          inicio: 2023-10-01T00:00:00Z
+          fim: 2024-04-01T23:59:59Z
+          paginacao:
+            paginaAtual: 0
+            itensPorPagina: 100
+            quantidadeDePaginas: 1
+            quantidadeTotalDeItens: 1
+        webhooks:
+          - webhookUrl: https://usuario.recebedor.com/api/webhookrec/
+            criacao: 2023-12-20T12:51:16.485Z
+    getRec1:
+      summary: Exemplo de retorno da consulta de recorrências 1
+      value:
+        parametros:
+          inicio: 2024-04-01T00:00:00Z
+          fim: 2024-04-01T23:59:59Z
+          paginacao:
+            paginaAtual: 0
+            itensPorPagina: 100
+            quantidadeDePaginas: 1
+            quantidadeTotalDeItens: 1
+        recs:
+          - idRec: RN1234567820240115abcdefghijk
+            status: APROVADA
+            valor:
+              valorRec: "300.00"
+            vinculo:
+              contrato: "98625023"
+              devedor:
+                cpf: "87734514122"
+                nome: Fulano de Tal
+              objeto: Serviços de Gestão de Imóveis
+            calendario:
+              dataFinal: 2028-09-01
+              dataInicial: 2024-02-01
+              periodicidade: MENSAL
+            politicaRetentativa: NAO_PERMITE
+            loc:
+              criacao: 2023-12-19T12:28:05.230Z
+              id: 5100
+              location: pix.example.com/qr/v2/rec/2353c790eefb11eaadc10242ac120002
+              idRec: RN1234567820240115abcdefghijk
+            pagador:
+              codMun: "2673833"
+              cpf: "75633122216"
+              ispbParticipante: "81102623"
+            recebedor:
+              cnpj: "92221288310574"
+              nome: Imobiliária Bom Sucesso
+            atualizacao:
+              - data: 2024-01-03T08:30:02.050Z
+                nome: CRIADA
+              - data: 2024-01-04T09:40:42.210Z
+                nome: APROVADA
+    getCobR1:
+      summary: Exemplo de retorno da consulta de cobranças recorrentes 1
+      value:
+        parametros:
+          inicio: 2024-04-01T00:00:00Z
+          fim: 2024-12-01T23:59:59Z
+          paginacao:
+            paginaAtual: 0
+            itensPorPagina: 100
+            quantidadeDePaginas: 1
+            quantidadeTotalDeItens: 1
+        cobsr:
+          - idRec: RR123456782024061999000566354
+            txid: 7f733863543b4a16b516d839bd4bc34e
+            calendario:
+              criacao: 2024-05-20
+              dataDeVencimento: 2024-06-20
+            valor:
+              original: "50.33"
+            status: ATIVA
+            ajusteDiaUtil: false
+            politicaRetentativa: PERMITE_3R_7D
+            devedor:
+              cep: 63259-740
+              cidade: Campinas
+              email: beltrano.silva@mail.com
+              logradouro: Rua Gonçalves Dias 605
+              uf: SP
+            recebedor:
+              conta: "997182"
+              tipoConta: CORRENTE
+            tentativas:
+              - dataLiquidacao: 2024-06-20
+                tipo: AGND
+                status: AGENDADA
+                endToEndId: E12345678202406201221abcdef12345
+                atualizacao:
+                  - data: 2024-05-21T10:40:16.730Z
+                    status: SOLICITADA
+                  - data: 2024-05-21T17:08:00.520Z
+                    status: AGENDADA
+            atualizacao:
+              - data: 2024-05-20T14:47:29.470Z
+                status: CRIADA
+              - data: 2024-05-21T10:18:20.120Z
+                status: ATIVA
+    RequisicaoInvalidaCobExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/CobOperacaoInvalida
+        title: Cobrança inválida.
+        status: 400
+        detail: A requisição que busca alterar ou criar uma cobrança para pagamento
+          imediato não respeita o _schema_ ou está semanticamente errada.
+        violacoes:
+          - razao: O campo cob.valor.original não respeita o _schema_.
+            propriedade: cob.valor.original
+    OperacaoInvalidaCobExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/CobOperacaoInvalida
+        title: Operação inválida.
+        status: 400
+        detail: A requisição que busca alterar ou criar uma cobrança para pagamento
+          imediato não respeita o _schema_ ou está semanticamente errada.
+    RequisicaoInvalidaCobVExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/CobVOperacaoInvalida
+        title: Cobrança inválida.
+        status: 400
+        detail: A requisição que busca alterar ou criar uma cobrança com vencimento não
+          respeita o _schema_ ou está semanticamente errada.
+        violacoes:
+          - razao: O objeto cobv.devedor não respeita o _schema_.
+            propriedade: cobv.devedor
+    OperacaoInvalidaCobVExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/CobVOperacaoInvalida
+        title: Operação inválida.
+        status: 400
+        detail: Cobrança não encontra-se mais com o status ATIVA, somente cobranças
+          ativas podem ser revisadas.
+    OperacaoInvalidaCobRExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/CobROperacaoInvalida
+        title: Operação inválida.
+        status: 400
+        detail: A cobrança não respeita o schema.
+        violacoes:
+          - razao: O objeto cobr.calendario não respeita o schema.
+            propriedade: cobr.calendario
+    OperacaoInvalidaCobRExample2:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/CobROperacaoInvalida
+        title: Operação inválida.
+        status: 400
+        detail: Não é possível cancelar uma cobrança em uma data igual ou maior que a
+          data prevista da primeira tentativa de liquidação.
+    OperacaoInvalidaRecExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/RecOperacaoInvalida
+        title: Operação inválida.
+        status: 400
+        detail: A recorrência não respeita o schema.
+        violacoes:
+          - razao: O campo rec.calendario.dataInicial não respeita o schema.
+            propriedade: rec.calendario.dataInicial
+    OperacaoInvalidaSolicRecExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/SolicRecOperacaoInvalida
+        title: Operação inválida.
+        status: 400
+        detail: A solicitação de confirmação de recorrência não respeita o schema.
+        violacoes:
+          - razao: O objeto solicrec.destinatario não respeita o schema.
+            propriedade: solicrec.destinatario
+    OperacaoInvalidaSolicRecExample2:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/SolicRecOperacaoInvalida
+        title: Operação inválida.
+        status: 400
+        detail: Não é possível cancelar uma solicitação de recorrência com o status
+          diferente de CRIADA ou RECEBIDA.
+    RequisicaoInvalidaCobPayloadExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/CobPayloadNaoEncontrado
+        title: Cobrança não encontrada.
+        status: 404
+        detail: A cobrança em questão não foi encontrada para a location requisitada.
+    RequisicaoInvalidaRecPayloadExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/RecPayloadOperacaoInvalida
+        title: Recorrência não encontrada.
+        status: 400
+        detail: A recorrência em questão encontra-se expirada, cancelada ou rejeitada.
+    RequisicaoInvalidaCobRTentativaExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/CobROperacaoInvalida
+        title: Cobrança não encontrada.
+        status: 400
+        detail: A política configurada na recorrência não permite retentativa de
+          cobrança.
+    RequisicaoInvalidaLoteCobVExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/LoteCobVOperacaoInvalida
+        title: Lote de cobranças inválido.
+        status: 400
+        detail: A requisição que busca alterar ou criar um lote de cobranças com
+          vencimento não respeita o _schema_ ou está semanticamente errada.
+        violacoes:
+          - razao: O objeto loteCobV.cobsV não respeita o _schema_.
+            propriedade: loteCobV.cobsV
+          - razao: O campo loteCobV.descricao não respeita o _schema_.
+            propriedade: loteCobV.descricao
+    RequisicaoInvalidaDevolucaoExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/PixDevolucaoInvalida
+        title: Devolução inválida.
+        status: 400
+        detail: A presente requisição de devolução não respeita o _schema_ ou não faz
+          sentido semanticamente.
+    RequisicaoInvalidaWebhookExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/WebhookOperacaoInvalida
+        title: Webhook inválido.
+        status: 400
+        detail: A presente requisição busca criar um webhook sem respeitar o _schema_
+          ou, ainda, com sentido semanticamente inválido.
+    RequisicaoInvalidaLocationExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/PayloadLocationOperacaoInvalida
+        title: PayloadLocation inválido.
+        status: 400
+        detail: A presente requisição busca criar uma location sem respeitar o _schema_
+          estabelecido.
+    AcessoNegadoExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/AcessoNegado
+        title: Acesso Negado
+        status: 403
+        detail: Requisição de participante autenticado que viola alguma regra de
+          autorização.
+    NaoEncontradoExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/NaoEncontrado
+        title: Não Encontrado
+        status: 404
+        detail: Entidade não encontrada.
+    ServicoIndisponivelExample1:
+      summary: Exemplo de erro da requisição 1
+      value:
+        type: https://pix.bcb.gov.br/api/v2/error/ServicoIndisponivel
+        title: Serviço Indisponível
+        status: 503
+        detail: Serviço não está disponível no momento. Serviço solicitado pode estar em
+          manutenção ou fora da janela de funcionamento.
+  requestBodies:
+    CobRBodyRevisada:
+      description: Dados para geração da cobrança.
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/CobRRevisada"
+          examples:
+            exemplo1:
+              $ref: "#/components/examples/cobRBody2"
+    PayloadLocationRecBody:
+      description: Dados para geração da location.
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PayloadLocationRecSolicitada"
+    WebhookRecConfigBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/WebhookRecSolicitado"
+          examples:
+            exemplo1:
+              $ref: "#/components/examples/recWebhookBody1"
+    WebhookCobRConfigBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/WebhookCobRSolicitado"
+          examples:
+            exemplo1:
+              $ref: "#/components/examples/cobRWebhookBody1"
+    SolicRecBody:
+      description: Dados para geração da solicitação da recorrência.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SolicRecSolicitada"
+          examples:
+            exemplo1:
+              $ref: "#/components/examples/solicRecBody1"
+    SolicRecBodyRevisada:
+      description: Dados para revisão da solicitação da recorrência.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SolicRecRevisada"
+          examples:
+            exemplo1:
+              $ref: "#/components/examples/solicRecBody2"
+    RecBody:
+      description: Dados para geração da recorrência.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/RecSolicitada"
+          examples:
+            exemplo1:
+              $ref: "#/components/examples/recBody1"
+            exemplo2:
+              $ref: "#/components/examples/recBody2"
+    RecBodyRevisada:
+      description: Dados para revisão da recorrência.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/RecRevisada"
+          examples:
+            retorno1:
+              $ref: "#/components/examples/recBody3"
+    CobRBody:
+      description: Dados para geração da cobrança recorrente.
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/CobRSolicitada"
+          examples:
+            exemplo1:
+              $ref: "#/components/examples/cobRBody1"
+    WebhookRecBody:
+      description: Dados para notificação.
+      required: true
+      content:
+        application/json:
+          schema:
+            properties:
+              recs:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RecNotification"
+          examples:
+            default:
+              value:
+                $ref: "#/components/examples/recWebhookNotification1/value"
+    WebhookCobRBody:
+      description: Dados para notificação.
+      required: true
+      content:
+        application/json:
+          schema:
+            properties:
+              cobsr:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CobRNotification"
+          examples:
+            default:
+              value:
+                $ref: "#/components/examples/cobRWebhookNotification1/value"
+  schemas:
+    TxId:
+      type: string
+      title: Id da Transação
+      description: >-
+        # Identificador da transação
+
+
+        O campo `txid` determina o identificador da transação.
+
+        O objetivo desse campo é ser um elemento que possibilite ao PSP do
+        recebedor apresentar ao usuário recebedor a funcionalidade de
+        conciliação de pagamentos.
+
+
+        Na pacs.008, é referenciado como `TransactionIdentification <txId>` ou
+        `idConciliacaoRecebedor`.
+
+
+        Em termos de fluxo de funcionamento, o txid é lido pelo aplicativo do
+        PSP do pagador e,
+
+        depois de confirmado o pagamento, é enviado para o SPI via pacs.008.
+
+        Uma pacs.008 também é enviada ao PSP do recebedor, contendo, além de
+        todas as informações usuais
+
+        do pagamento, o txid.
+
+        Ao perceber um recebimento dotado de txid, o PSP do recebedor está apto
+        a se comunicar com o usuário recebedor,
+
+        informando que um pagamento específico foi liquidado.
+
+
+        O txid é criado exclusivamente pelo usuário recebedor e está sob sua
+        responsabilidade.
+
+        O txid, no contexto de representação de uma cobrança, é único por
+        CPF/CNPJ do usuário recebedor. Cabe ao
+
+        PSP recebedor validar essa regra na API Pix.
+      pattern: "[a-zA-Z0-9]{26,35}"
+    EndToEndId:
+      type: string
+      title: Id fim a fim da transação
+      description: EndToEndIdentification que transita na PACS002, PACS004 e PACS008
+      pattern: "[a-zA-Z0-9]{32}"
+      minLength: 32
+      maxLength: 32
+    DevolucaoId:
+      type: string
+      title: Id da Devolução
+      description: Id gerado pelo cliente para representar unicamente uma devolução.
+      pattern: "[a-zA-Z0-9]{1,35}"
+    DevolucaoNaturezaPixAutomatico:
+      type: string
+      title: Natureza da Devolução
+      description: >-
+        Indica qual é a natureza da devolução. Uma devolução pode ser
+        relacionada a um Pix comum (com códigos possíveis: `MD06` e `FR01` da
+        pacs.004 e `REFU` da pacs.008). Na ausência deste campo a natureza deve
+        ser interpretada como
+
+        sendo de um Pix comum (`ORIGINAL`).
+
+
+        As naturezas são assim definidas:
+          - `ORIGINAL`: quando a devolução é solicitada pelo usuário recebedor e se refere a um Pix comum (`MD06`);
+          - `MED_FRAUDE`: quando a devolução ocorre no âmbito do MED (Mecanismo Especial de Devolução) por fundada suspeita de fraude e se refere a um Pix comum (`FR01`).
+          - `MED_PIX_AUTOMATICO`: reembolso total ou parcial ao participante do usuário pagador no âmbito do MED (Mecanismo Especial de Devolução) para o Pix Automático pela utilização de recursos próprios para ressarcimento do usuário pagador.(`REFU`);
+
+        Os valores de devoluções são sempre limitados aos valores máximos a
+        seguir:
+
+        - Pix comum: o valor da devolução é limitado ao valor do próprio Pix (a
+        natureza nesse caso pode ser: ORIGINAL, MED_PIX_AUTOMATICO ou
+        MED_FRAUDE);
+      enum:
+        - ORIGINAL
+        - MED_PIX_AUTOMATICO
+        - MED_FRAUDE
+    PayloadLocationRecId:
+      type: integer
+      format: int64
+      title: Id da location
+      description: Identificador da location a ser informada na criação de uma recorrência .
+    Revisao:
+      type: integer
+      format: int32
+      title: Revisão
+      description: >-
+        # O campo `revisao`
+
+
+        Denota a revisão da cobrança.  Sempre começa em zero. Sempre varia em
+        acréscimos de 1.
+
+
+        O incremento em uma cobrança deve ocorrer sempre que um objeto da
+        cobrança em questão for alterado.
+
+        O campo `loc` é uma exceção a esta regra.
+
+
+        Se em uma determinada alteração em uma cobrança, o único campo alterado
+        for o campo `loc`,
+
+        então esta operação não incrementa a revisão da cobrança.
+
+
+        O campo `loc` não ocasiona uma alteração na cobrança em si.
+
+        Não é necessário armazenar histórico das alterações do campo `loc` para
+        uma determinada cobrança.
+
+        Para os outros campos da cobrança, registra-se histórico.
+      readOnly: true
+    PessoaFisica:
+      type: object
+      required:
+        - cpf
+        - nome
+      title: Pessoa Física
+      properties:
+        cpf:
+          type: string
+          title: CPF
+          pattern: /^\d{11}$/
+          description: CPF do usuário.
+        nome:
+          type: string
+          title: Nome
+          description: Nome do usuário.
+          maxLength: 200
+    PessoaJuridica:
+      type: object
+      required:
+        - cnpj
+        - nome
+      title: Pessoa Jurídica
+      properties:
+        cnpj:
+          type: string
+          title: CNPJ
+          pattern: ^[0-9A-Z]{14}$
+          description: CNPJ do usuário.
+        nome:
+          type: string
+          title: Nome
+          description: Nome do usuário.
+          maxLength: 200
+    PessoaFisicaRecorrencia:
+      type: object
+      required:
+        - cpf
+        - nome
+      title: Pessoa Física
+      properties:
+        cpf:
+          type: string
+          title: CPF
+          pattern: /^\d{11}$/
+          description: CPF do usuário.
+        nome:
+          type: string
+          title: Nome
+          description: Nome do usuário.
+          maxLength: 140
+    PessoaJuridicaRecorrencia:
+      type: object
+      required:
+        - cnpj
+        - nome
+      title: Pessoa Jurídica
+      properties:
+        cnpj:
+          type: string
+          title: CNPJ
+          pattern: ^[0-9A-Z]{14}$
+          description: CNPJ do usuário.
+        nome:
+          type: string
+          title: Nome
+          description: Nome do usuário.
+          maxLength: 140
+    CPF:
+      type: object
+      required:
+        - cpf
+      title: Pessoa Física
+      properties:
+        cpf:
+          type: string
+          title: CPF
+          pattern: /^\d{11}$/
+          description: CPF do usuário.
+    CNPJ:
+      type: object
+      required:
+        - cnpj
+      title: Pessoa Jurídica
+      properties:
+        cnpj:
+          type: string
+          title: CNPJ
+          pattern: ^[0-9A-Z]{14}$
+          description: CNPJ do usuário.
+    DadosComplementaresPessoa:
+      type: object
+      properties:
+        logradouro:
+          type: string
+          title: Logradouro
+          description: Logradouro do usuário.
+          maxLength: 200
+        cidade:
+          type: string
+          title: Cidade
+          description: Cidade do usuário.
+          maxLength: 200
+        uf:
+          type: string
+          title: UF
+          description: UF do usuário.
+          maxLength: 2
+        cep:
+          type: string
+          title: CEP
+          description: CEP do usuário.
+          maxLength: 8
+    DadosDevedor:
+      type: object
+      properties:
+        devedor:
+          description: O objeto devedor organiza as informações sobre o devedor da cobrança.
+          oneOf:
+            - $ref: "#/components/schemas/PessoaFisica"
+            - $ref: "#/components/schemas/PessoaJuridica"
+          allOf:
+            - type: object
+              properties:
+                email:
+                  type: string
+                  title: Email
+                  description: Email do usuário.
+            - $ref: "#/components/schemas/DadosComplementaresPessoa"
+    DadosDevedorRecorrencia:
+      type: object
+      properties:
+        devedor:
+          description: O objeto devedor organiza as informações sobre o devedor da
+            recorrência.
+          allOf:
+            - type: object
+              properties:
+                email:
+                  type: string
+                  title: Email
+                  description: Email do usuário.
+            - $ref: "#/components/schemas/DadosComplementaresPessoa"
+    DadosRecebedor:
+      type: object
+      required:
+        - logradouro
+        - cidade
+        - uf
+        - cep
+      properties:
+        recebedor:
+          description: O objeto recebedor organiza as informações sobre o credor da
+            cobrança.
+          oneOf:
+            - $ref: "#/components/schemas/PessoaFisica"
+            - type: object
+              allOf:
+                - $ref: "#/components/schemas/PessoaJuridica"
+                - type: object
+                  properties:
+                    nomeFantasia:
+                      type: string
+                      title: Nome fantasia
+                      description: Nome fantasia.
+                      maxLength: 200
+          allOf:
+            - required:
+                - logradouro
+                - cidade
+                - uf
+                - cep
+            - $ref: "#/components/schemas/DadosComplementaresPessoa"
+    DadosBancarios:
+      type: object
+      required:
+        - conta
+        - ispbParticipante
+      properties:
+        conta:
+          type: string
+          title: Conta do Usuário Pagador
+          description: Número da conta do usuário pagador.
+          maxLength: 20
+        ispbParticipante:
+          type: string
+          title: ISPB do usuário pagador.
+          description: ISPB do usuário pagador.
+          pattern: ^[0-9A-Z]{8}$
+        agencia:
+          type: string
+          title: Agência do Usuário Pagador
+          description: Número da agência do usuário pagador.
+          maxLength: 4
+    DadosBancariosRecebedor:
+      type: object
+      required:
+        - conta
+        - tipoConta
+      properties:
+        conta:
+          type: string
+          description: Número da conta do usuário recebedor.
+          maxLength: 20
+        tipoConta:
+          type: string
+          title: Tipo da conta do usuário recebedor
+          description: Tipo da conta do usuário recebedor.
+          enum:
+            - CORRENTE
+            - POUPANCA
+            - PAGAMENTO
+        agencia:
+          type: string
+          description: Número da agência do usuário recebedor.
+          maxLength: 4
+    DadosPagadorRec:
+      type: object
+      title: Dados do Pagador
+      required:
+        - ispbParticipante
+      properties:
+        pagador:
+          allOf:
+            - type: object
+              properties:
+                ispbParticipante:
+                  type: string
+                  title: ISPB do PSP pagador.
+                  description: ISPB do PSP pagador.
+                  pattern: ^[0-9A-Z]{8}$
+            - type: object
+              properties:
+                codMun:
+                  title: Código do município
+                  description: Código baseado na Tabela de Códigos de Municípios do
+                    __[IBGE](https://www.ibge.gov.br/explica/codigos-dos-municipios.php)__
+                    que apresenta a lista dos municípios brasileiros associados
+                    a um código composto de 7 dígitos, sendo os dois primeiros
+                    referentes ao código da Unidade da Federação.
+                  type: string
+                  pattern: /^\d{7}$/
+          oneOf:
+            - $ref: "#/components/schemas/CPF"
+            - $ref: "#/components/schemas/CNPJ"
+    WebhookSolicitado:
+      type: object
+      required:
+        - webhookUrl
+      title: Webhook
+      properties:
+        webhookUrl:
+          type: string
+          format: uri
+          examples:
+            - https://pix.example.com/api/webhook/
+    WebhookRecBase:
+      type: object
+      required:
+        - webhookUrl
+      title: Webhook Base
+      properties:
+        webhookUrl:
+          type: string
+          title: URL Webhook
+          format: uri
+          examples:
+            - https://pix.example.com/api/webhookrec/
+    WebhookRecCompleto:
+      type: object
+      required:
+        - webhookUrl
+      title: Webhook Base
+      properties:
+        webhookUrl:
+          type: string
+          title: URL Webhook
+          format: uri
+          examples:
+            - https://pix.example.com/api/webhookrec/
+        criacao:
+          type: string
+          format: date-time
+          title: Data de Criação
+          description: Data e hora em que o webhook foi cadastrado. Respeita RFC 3339.
+          readOnly: true
+    WebhookCobRCompleto:
+      type: object
+      required:
+        - webhookUrl
+      title: Webhook Base
+      properties:
+        webhookUrl:
+          type: string
+          title: URL Webhook
+          format: uri
+          examples:
+            - https://pix.example.com/api/webhookrec/
+        criacao:
+          type: string
+          format: date-time
+          title: Data de Criação
+          description: Data e hora em que o webhook foi cadastrado. Respeita RFC 3339.
+          readOnly: true
+    WebhookRecSolicitado:
+      type: object
+      title: Webhook Solicitado
+      allOf:
+        - $ref: "#/components/schemas/WebhookRecBase"
+    WebhookCobRSolicitado:
+      type: object
+      required:
+        - webhookUrl
+      title: Webhook Base
+      properties:
+        webhookUrl:
+          type: string
+          title: URL Webhook
+          format: uri
+          examples:
+            - https://pix.example.com/api/webhookrec/
+    RecCompleta:
+      type: object
+      title: Recorrência Completa
+      required:
+        - status
+        - recebedor
+      allOf:
+        - type: object
+          properties:
+            idRec:
+              $ref: "#/components/schemas/RecId"
+        - $ref: "#/components/schemas/RecBase"
+        - type: object
+          properties:
+            recebedor:
+              oneOf:
+                - $ref: "#/components/schemas/PessoaJuridicaRecorrencia"
+              allOf:
+                - type: object
+                  properties:
+                    convenio:
+                      type: string
+                      title: Convênio
+                      description: Convênio entre usuário e participante recebedor.
+                      maxLength: 60
+        - $ref: "#/components/schemas/DadosPagadorRec"
+        - $ref: "#/components/schemas/RecStatus"
+        - $ref: "#/components/schemas/RecConfiguracao"
+        - type: object
+          properties:
+            loc:
+              allOf:
+                - $ref: "#/components/schemas/PayloadLocationRecCompleta"
+        - $ref: "#/components/schemas/RecAtualizacao"
+        - $ref: "#/components/schemas/RecEncerramento"
+        - type: object
+          properties:
+            solicitacao:
+              type: array
+              title: Solicitações vinculadas
+              description: Solicitações vinculadas
+              items:
+                allOf:
+                  - $ref: "#/components/schemas/SolicRecCompleta"
+        - $ref: "#/components/schemas/RecAtivacao"
+        - type: object
+          properties:
+            dadosQR:
+              type: object
+              title: Informações do QR Composto.
+              description: >-
+                Informações relacionadas aos parâmetros idRec e txid informados
+                na requisição. Ao consultar uma recorrência via endpoint GET
+                /rec/{idRec}?txid={txid}, o usuário recebedor pode optar pela
+                consulta sem o txid ou por compor a requisição com um txid de
+                uma cobrança imediata ou de uma cobrança com vencimento, de
+                forma a obter o QR Composto para a jornada de interesse. Os
+                dadosQR retornados variam de acordo com a jornada desejada,
+                indicada pela presença dos parâmetros de interesse.
+
+                No cenário em que existe apenas o idRec, sem txid de cobrança
+                imediata ou de cobrança com vencimento, o sistema retorna a
+                jornada JORNADA_2, com o QR Composto da recorrência. Quando
+                existe idRec e também um txid de cobrança imediata, sem txid de
+                cobrança com vencimento, o sistema retorna a jornada JORNADA_3,
+                que representa o QR Composto da cobrança imediata associado à
+                recorrência. No cenário em que existe idRec e txid de cobrança
+                com vencimento, sem txid de cobrança imediata, o sistema retorna
+                a jornada JORNADA_4, que representa o QR Composto da cobrança
+                com vencimento associado à recorrência.
+
+                Os campos dadosQR.jornada e dadosQR.pixCopiaECola somente serão
+                retornados se todas as informações necessárias para a geração do
+                QR Composto estiverem devidamente preenchidas tanto na
+                recorrência quanto na eventual cobrança, dependendo da jornada
+                correspondente.
+              properties:
+                jornada:
+                  type: string
+                  title: Jornada de ativação
+                  enum:
+                    - JORNADA_2
+                    - JORNADA_3
+                    - JORNADA_4
+                pixCopiaECola:
+                  type: string
+                  title: Pix Copia e Cola correspondente Ã  RecorrÃªncia.
+                  description: Este campo retorna o valor do Pix Copia e Cola correspondente
+                    Ã  recorrÃªncia. Trata-se da sequÃªncia de caracteres que
+                    representa o BR Code.
+                  maxLength: 512
+    RecCompletaPesquisada:
+      type: object
+      title: Recorrência Completa Pesquisada
+      required:
+        - status
+        - recebedor
+      allOf:
+        - type: object
+          properties:
+            idRec:
+              $ref: "#/components/schemas/RecId"
+        - $ref: "#/components/schemas/RecBase"
+        - type: object
+          properties:
+            recebedor:
+              oneOf:
+                - $ref: "#/components/schemas/PessoaJuridicaRecorrencia"
+              allOf:
+                - type: object
+                  properties:
+                    convenio:
+                      type: string
+                      title: Convênio
+                      description: Convênio entre usuário e participante recebedor.
+                      maxLength: 60
+        - $ref: "#/components/schemas/DadosPagadorRec"
+        - $ref: "#/components/schemas/RecStatus"
+        - $ref: "#/components/schemas/RecConfiguracao"
+        - type: object
+          properties:
+            loc:
+              allOf:
+                - $ref: "#/components/schemas/PayloadLocationRecCompleta"
+        - $ref: "#/components/schemas/RecAtualizacao"
+        - $ref: "#/components/schemas/RecEncerramento"
+        - type: object
+          properties:
+            solicitacao:
+              type: array
+              title: Solicitações vinculadas
+              description: Solicitações vinculadas
+              items:
+                allOf:
+                  - $ref: "#/components/schemas/SolicRecCompleta"
+        - $ref: "#/components/schemas/RecAtivacao"
+    RecGerada:
+      type: object
+      title: Recorrência Gerada
+      required:
+        - recebedor
+      allOf:
+        - type: object
+          properties:
+            idRec:
+              $ref: "#/components/schemas/RecId"
+        - $ref: "#/components/schemas/RecBase"
+        - type: object
+          properties:
+            recebedor:
+              oneOf:
+                - $ref: "#/components/schemas/PessoaJuridicaRecorrencia"
+              allOf:
+                - type: object
+                  properties:
+                    convenio:
+                      type: string
+                      title: Convênio
+                      description: Convênio entre usuário e participante recebedor.
+                      maxLength: 60
+        - $ref: "#/components/schemas/RecStatus"
+        - type: object
+          properties:
+            loc:
+              allOf:
+                - $ref: "#/components/schemas/PayloadLocationRecCompleta"
+        - $ref: "#/components/schemas/RecAtualizacao"
+        - $ref: "#/components/schemas/RecEncerramento"
+        - $ref: "#/components/schemas/RecAtivacao"
+    RecSolicitada:
+      type: object
+      title: Recorrência Solicitada
+      allOf:
+        - $ref: "#/components/schemas/RecBase"
+        - type: object
+          properties:
+            recebedor:
+              type: object
+              properties:
+                convenio:
+                  type: string
+                  title: Convênio
+                  description: Convênio entre usuário e participante recebedor.
+                  maxLength: 60
+        - $ref: "#/components/schemas/RecConfiguracao"
+        - type: object
+          properties:
+            loc:
+              allOf:
+                - $ref: "#/components/schemas/PayloadLocationRecId"
+        - $ref: "#/components/schemas/RecAtivacaoSolicitada"
+    RecPayload:
+      type: object
+      title: Payload da Recorrência
+      required:
+        - idRec
+        - atualizacao
+        - recebedor
+      allOf:
+        - type: object
+          properties:
+            idRec:
+              $ref: "#/components/schemas/RecId"
+        - $ref: "#/components/schemas/RecBase"
+        - type: object
+          properties:
+            recebedor:
+              oneOf:
+                - $ref: "#/components/schemas/PessoaJuridicaRecorrencia"
+              allOf:
+                - type: object
+                  required:
+                    - ispbParticipante
+                  properties:
+                    ispbParticipante:
+                      type: string
+                      title: ISPB do usuário recebedor.
+                      description: ISPB do usuário recebedor.
+                      pattern: ^[0-9A-Z]{8}$
+        - $ref: "#/components/schemas/RecConfiguracao"
+        - $ref: "#/components/schemas/RecAtualizacao"
+    RecRevisada:
+      type: object
+      title: Recorrência Revisada
+      description: Atributos de Revisão da Configuração de Recorrência
+      allOf:
+        - type: object
+          title: Status da Recorrência
+          properties:
+            status:
+              type: string
+              title: Status do registro da recorrência
+              enum:
+                - CANCELADA
+        - type: object
+          properties:
+            vinculo:
+              type: object
+              properties:
+                devedor:
+                  description: O objeto devedor organiza as informações sobre o devedor da
+                    recorrência.
+                  oneOf:
+                    - type: object
+                      required:
+                        - nome
+                      title: Pessoa Física
+                      properties:
+                        nome:
+                          type: string
+                          title: Nome
+                          description: Nome do usuário.
+                          maxLength: 140
+                    - type: object
+                      required:
+                        - nome
+                      title: Pessoa Jurídica
+                      properties:
+                        nome:
+                          type: string
+                          title: Nome
+                          description: Nome do usuário.
+                          maxLength: 140
+        - type: object
+          properties:
+            loc:
+              allOf:
+                - $ref: "#/components/schemas/PayloadLocationRecId"
+        - type: object
+          properties:
+            calendario:
+              type: object
+              title: Informações sobre calendário da recorrência
+              description: Informações sobre calendário da recorrência
+              properties:
+                dataInicial:
+                  type: string
+                  format: date
+                  title: Data estimada de primeiro pagamento.
+                  description: Trata-se de uma data, no formato `YYYY-MM-DD`, segundo ISO 8601.
+                    Data estimada de primeiro pagamento.
+                  examples:
+                    - 2023-04-01
+        - $ref: "#/components/schemas/RecAtivacaoSolicitada"
+    RecNotification:
+      type: object
+      title: Recorrência Notificada
+      required:
+        - idRec
+        - status
+        - atualizacao"
+      description: Atributos de Notificação de Recorrência
+      allOf:
+        - type: object
+          properties:
+            idRec:
+              $ref: "#/components/schemas/RecId"
+        - $ref: "#/components/schemas/RecStatus"
+        - $ref: "#/components/schemas/RecAtualizacao"
+        - $ref: "#/components/schemas/RecEncerramento"
+        - $ref: "#/components/schemas/RecAtivacao"
+    RecAtivacao:
+      type: object
+      title: Dados relacionados à confirmação da ativação da recorrência.
+      properties:
+        ativacao:
+          type: object
+          title: Dados relacionados à confirmação da ativação da recorrência.
+          required:
+            - tipoJornada
+          description: Dados relacionados à confirmação da ativação da recorrência.
+          properties:
+            tipoJornada:
+              type: string
+              title: Jornada de ativação
+              description: >
+                Dado relacionado ao caminho percorrido pelo processo de adesão a
+                recorrência pelo usuário pagador, os valores possíveis são:
+                  - JORNADA_1: Usuário pagador aceitou a recorrência através de notificação externa ao ecossistema
+                  - JORNADA_2: Usuário pagador aceitou a recorrência através de leitura de QR Code de recorrência
+                  - JORNADA_3: Usuário pagador iniciou a recorrência através de leitura de QR Code composto e pagamento de cobrança imediata. O uso desta jornada torna obrigatório o preenchimento da informação dadosJornada.txid
+                  - JORNADA_4: Usuário pagador escolheu aderir à recorrência através de leitura de QR Code composto relacionado à cobrança com vencimento ou estática relacionada a um contrato vigente
+                  - AGUARDANDO_DEFINICAO: Valor inicial posterior a criação e anterior a ativação da recorrência.
+              enum:
+                - JORNADA_1
+                - JORNADA_2
+                - JORNADA_3
+                - JORNADA_4
+                - AGUARDANDO_DEFINICAO
+            dadosJornada:
+              type: object
+              title: Dados de confirmação da jornada e início da recorrência
+              oneOf:
+                - type: object
+                  title: Cobrança imediata vinculada à Jornada 3
+                  required:
+                    - txid
+                  description: Dado de preenchimento obrigatório quando utilizada a Jornada 3.
+                    Este campo deve ser removido pelo PSP Recebedor quando a
+                    ativação for realizada pelas jornadas 1, 2 ou 4.
+                  properties:
+                    txid:
+                      $ref: "#/components/schemas/TxId"
+    RecAtivacaoSolicitada:
+      type: object
+      title: Dados relacionados à confirmação da ativação da recorrência.
+      properties:
+        ativacao:
+          type: object
+          title: Dados relacionados à confirmação da ativação da recorrência.
+          description: Dados relacionados à confirmação da ativação da recorrência.
+          properties:
+            dadosJornada:
+              type: object
+              title: Dados de confirmação da jornada e início da recorrência
+              oneOf:
+                - type: object
+                  title: Cobrança imediata vinculada à Jornada 3
+                  required:
+                    - txid
+                  description: Dado de preenchimento obrigatório quando utilizada a Jornada 3.
+                    Este campo deve ser removido pelo PSP Recebedor quando a
+                    ativação for realizada pelas jornadas 1, 2 ou 4.
+                  properties:
+                    txid:
+                      $ref: "#/components/schemas/TxId"
+    RecStatus:
+      type: object
+      title: Status da Recorrência
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          title: Status do registro da recorrência
+          enum:
+            - CRIADA
+            - APROVADA
+            - REJEITADA
+            - EXPIRADA
+            - CANCELADA
+    RecConfiguracao:
+      type: object
+      title: Configuração da Recorrência
+      required:
+        - politicaRetentativa
+      properties:
+        politicaRetentativa:
+          type: string
+          title: Política de retentativa pós vencimento da recorrência
+          enum:
+            - NAO_PERMITE
+            - PERMITE_3R_7D
+    RecAtualizacao:
+      type: object
+      title: Histórico de atualização da recorrência.
+      required:
+        - atualizacao
+      properties:
+        atualizacao:
+          type: array
+          title: Histórico de Status
+          description: Histórico das mudanças de status da recorrência.
+          items:
+            type: object
+            required:
+              - status
+              - data
+            properties:
+              status:
+                type: string
+                title: Status da recorrência
+                description: Status da recorrência.
+                enum:
+                  - CRIADA
+                  - APROVADA
+                  - REJEITADA
+                  - EXPIRADA
+                  - CANCELADA
+              data:
+                type: string
+                format: date-time
+                description: Data e hora do registro de status atualizado. Respeita RFC 3339.
+    RecEncerramento:
+      type: object
+      title: Detalhamento do encerramento da recorrência.
+      properties:
+        encerramento:
+          type: object
+          title: Detalhamento do encerramento da recorrência.
+          oneOf:
+            - type: object
+              properties:
+                rejeicao:
+                  type: object
+                  title: Informações sobre a rejeição da recorrência
+                  required:
+                    - codigo
+                    - descricao
+                  description: Informações sobre a rejeição da recorrência
+                  properties:
+                    codigo:
+                      type: string
+                      title: Código da rejeição
+                      description: Código da rejeição. Corresponde ao código de rejeição presente no
+                        catálogo de mensagens.
+                      enum:
+                        - AP13
+                        - AP14
+                      maxLength: 4
+                    descricao:
+                      type: string
+                      title: Descricao da rejeição
+                      description: Descricao da causa da rejeição
+                      maxLength: 400
+            - type: object
+              properties:
+                cancelamento:
+                  type: object
+                  title: Informações sobre o cancelamento da recorrência
+                  required:
+                    - solicitante
+                    - codigo
+                    - descricao
+                  description: Informações sobre o cancelamento da recorrência
+                  properties:
+                    solicitante:
+                      type: string
+                      title: Solicitante do cancelamento
+                      enum:
+                        - PSP_PAGADOR
+                        - USUARIO_PAGADOR
+                        - PSP_RECEBEDOR
+                        - USUARIO_RECEBEDOR
+                    codigo:
+                      type: string
+                      title: Código do cancelamento
+                      description: Código do cancelamento. Corresponde ao código de cancelamento
+                        presente no catálogo de mensagens.
+                      enum:
+                        - ACCL
+                        - CPCL
+                        - DCSD
+                        - ERSL
+                        - FRUD
+                        - PCFD
+                        - SLCR
+                        - SLDB
+                      maxLength: 4
+                    descricao:
+                      type: string
+                      title: Descricao do cancelamento
+                      description: Descricao do cancelamento.
+                      maxLength: 400
+    RecId:
+      type: string
+      title: ID Recorrência
+      description: >-
+        Identificador da Recorrência
+
+          Regra de formação:
+          - RAxxxxxxxxyyyyMMddkkkkkkkkkkk (29 caracteres; "case sensitive", isso é, diferencia letras maiúsculas e minúsculas), sendo:
+          - "R":  fixo (1 caractere). "R" para a recorrência criada dentro do Pix;
+          - "A": identificação da possibilidade de novas tentativas, sendo possíveis os valores "R" ou "N" (1 caractere). "R" caso a recorrência permita novas tentativas de pagamento pós vencimento, ou "N" caso não permita novas tentativas.
+          - "xxxxxxxx":  identificação do agente que presta serviço para o usuário recebedor que gerou o ID Recorrência, podendo ser: o ISPB do participante direto, o ISPB do participante indireto ou os 8 primeiros caracteres do CNPJ do prestador de serviço de iniciação (8 caracteres alfanuméricos [A-Z|0-9]);
+          - "yyyyMMdd":  data (8 caracteres) de criação da recorrência;
+          - "kkkkkkkkkkk": sequencial criado pelo agente que gerou o ID Recorrência (11 caracteres alfanuméricos [a-z|A-Z|0-9]). Deve ser único dentro de cada "yyyyMMdd".
+
+        Dessa forma, o ID da recorrência deve ser formado de acordo com um dos
+        tipos a seguir:
+
+        - "RRxxxxxxxxyyyyMMddkkkkkkkkkkk"; para recorrência criada dentro do Pix
+        e que permite novas tentativas de pagamento pós vencimento; ou
+
+        - "RNxxxxxxxxyyyyMMddkkkkkkkkkkk"; para recorrência criada dentro do Pix
+        e que não permite novas tentativas de pagamento pós vencimento.
+      pattern: "[a-zA-Z0-9]{29}"
+      minLength: 29
+      maxLength: 29
+      examples:
+        - RR1234567820240115abcdefghijk
+    RecBase:
+      title: Recorrência Base
+      type: object
+      required:
+        - idRec
+        - calendario
+        - vinculo
+        - retentativa
+      properties:
+        vinculo:
+          type: object
+          title: Descrição do Objeto da Recorrência
+          required:
+            - contrato
+            - devedor
+          description: Informações sobre o objeto da recorrência.
+          properties:
+            objeto:
+              type: string
+              title: Identificador do objeto de vínculo
+              description: Campo de texto livre para informações referentes ao contrato que
+                permitam ao usuário pagador reconhecer o objeto dos pagamentos
+                periódicos por meio do Pix Automático.
+              maxLength: 35
+              examples:
+                - - Conta de energia Av. Paulista, 1804
+                  - Serviço de internet banda larga
+                  - Assinatura anual
+            devedor:
+              description: O objeto devedor organiza as informações sobre o devedor da
+                recorrência.
+              oneOf:
+                - $ref: "#/components/schemas/PessoaFisicaRecorrencia"
+                - $ref: "#/components/schemas/PessoaJuridicaRecorrencia"
+            contrato:
+              type: string
+              title: Objeto da autorização
+              description: Número, identificador, ou código que representa o objeto da
+                autorização (contrato, pedido etc.).
+              maxLength: 35
+        calendario:
+          type: object
+          title: Informações sobre calendário da recorrência
+          required:
+            - dataInicial
+            - periodicidade
+          description: Informações sobre calendário da recorrência
+          properties:
+            dataInicial:
+              type: string
+              format: date
+              title: Data estimada de primeiro pagamento.
+              description: Trata-se de uma data, no formato `YYYY-MM-DD`, segundo ISO 8601.
+                Data estimada de primeiro pagamento.
+              examples:
+                - 2023-04-01
+            dataFinal:
+              type: string
+              format: date
+              title: Data final da vigência.
+              description: Campo opcional que deve ser preenchido para autorizações com
+                vigência pré-definida, devendo ser compatível com os valores
+                informados em tipoFrequencia e a dataInicialRecorrencia. Não
+                deve ser preenchido para autorizações por tempo indeterminado.
+                Trata-se de uma data, no formato `YYYY-MM-DD`, segundo ISO 8601.
+              examples:
+                - 2023-04-01
+            periodicidade:
+              type: string
+              title: Periodicidade das cobranças recorrentes.
+              enum:
+                - SEMANAL
+                - MENSAL
+                - TRIMESTRAL
+                - SEMESTRAL
+                - ANUAL
+        valor:
+          type: object
+          properties:
+            valorRec:
+              type: string
+              pattern: \d{1,10}\.\d{2}
+              title: Valor da recorrência
+              description: Campo opcional, deve ser preenchido apenas quando o valor dos
+                pagamentos for fixo ou não for sujeito a alteração durante a
+                vigência da autorização.
+            valorMinimoRecebedor:
+              type: string
+              pattern: \d{1,10}\.\d{2}
+              title: Valor mínimo da recorrência
+              description: Campo opcional. Valor definido pelo usuário recebedor. Se o usuário
+                pagador atribuir um valor máximo para os pagamentos daquela
+                autorização, ele não poderá ser inferior ao piso definido pelo
+                usuário recebedor. Não pode ser preenchido nas autorizações de
+                valor fixo, ou seja, com campo valor preenchido.
+    SolicRecId:
+      type: object
+      title: Id da Solicitação de recorrência
+      required:
+        - idSolicRec
+      description: Dados criados ou alterados da cobrança recorrente via API Pix
+      properties:
+        idSolicRec:
+          type: string
+          title: ID Solicitação da Recorrência
+          description: >
+            # Identificador da Solicitação da Recorrência
+
+
+            Regra de formação:
+
+            - SCxxxxxxxxyyyyMMddkkkkkkkkkkk (29 caracteres; "case sensitive",
+            isso é, diferencia letras maiúsculas e minúsculas), sendo:
+              - SC - fixo (2 caracteres);
+              - xxxxxxxx – ISPB do agente que envia a mensagem pain.009 de solicitação de confirmação da recorrência (8 caracteres alfanuméricos [A-Z|0-9]);
+              - yyyyMMdd – data (8 caracteres) de criação da mensagem pain.009 de solicitação de confirmação da recorrência;
+              - kkkkkkkkkkk – sequencial criado pelo agente que gerou a mensagem de solicitação de confirmação da recorrência (11 caracteres alfanuméricos [a-z|A-Z|0-9]). Deve ser único dentro de cada "yyyyMMdd".
+          pattern: "[a-zA-Z0-9]{29}"
+          minLength: 29
+          maxLength: 29
+          examples:
+            - SC1234567820240115abcdefghijk
+    SolicRecBase:
+      type: object
+      title: Solicitação de Recorrência Base
+      required:
+        - calendario
+        - pagador
+        - idRec
+        - destinatario
+      description: Dados criados ou alterados da cobrança recorrente via API Pix
+      properties:
+        idRec:
+          $ref: "#/components/schemas/RecId"
+        calendario:
+          type: object
+          title: Informações de Calendário da Solicitação da Recorrência
+          required:
+            - dataExpiracaoSolicitacao
+          properties:
+            dataExpiracaoSolicitacao:
+              type: string
+              format: date-time
+              title: Data da expiração da solicitação enviada ao usuário pagador.
+              description: Data da expiração da solicitação enviada ao usuário pagador.
+                Respeita RFC 3339.
+        destinatario:
+          allOf:
+            - $ref: "#/components/schemas/DadosBancarios"
+          oneOf:
+            - $ref: "#/components/schemas/CPF"
+            - $ref: "#/components/schemas/CNPJ"
+    SolicRecStatus:
+      type: object
+      title: Status da Solicitação de Recorrência
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          title: Status do registro da solicitação de recorrência
+          enum:
+            - CRIADA
+            - ENVIADA
+            - RECEBIDA
+            - REJEITADA
+            - ACEITA
+            - EXPIRADA
+            - CANCELADA
+    SolicRecAtualizacao:
+      type: object
+      title: Histórico de Status da Solicitação de Recorrência
+      required:
+        - atualizacao
+      properties:
+        atualizacao:
+          type: array
+          title: Histórico de Status da Solicitação de Recorrência
+          description: ""
+          items:
+            type: object
+            required:
+              - status
+              - data
+            properties:
+              status:
+                type: string
+                title: Status do registro da solicitação de recorrência
+                enum:
+                  - CRIADA
+                  - ENVIADA
+                  - RECEBIDA
+                  - REJEITADA
+                  - ACEITA
+                  - EXPIRADA
+                  - CANCELADA
+              data:
+                type: string
+                format: date-time
+                description: Data e hora do registro de status atualizado. Respeita RFC 3339.
+    SolicRecSolicitada:
+      type: object
+      title: Solicitação de Recorrência
+      description: Dados criados ou alterados da solicitação da recorrência
+      allOf:
+        - $ref: "#/components/schemas/SolicRecBase"
+    SolicRecRevisada:
+      type: object
+      title: Solicitação de Recorrência
+      description: Dados alterados da solicitação da recorrência
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          title: Status do registro da solicitação de recorrência
+          enum:
+            - CANCELADA
+    SolicRecCompleta:
+      type: object
+      title: Solicitação de Recorrência Completa
+      required:
+        - rec
+      description: Dados criados ou alterados da solicitação da recorrência
+      allOf:
+        - $ref: "#/components/schemas/SolicRecId"
+        - $ref: "#/components/schemas/SolicRecBase"
+        - $ref: "#/components/schemas/SolicRecStatus"
+        - $ref: "#/components/schemas/SolicRecAtualizacao"
+        - type: object
+          properties:
+            recPayload:
+              $ref: "#/components/schemas/RecPayload"
+    CobRGerada:
+      type: object
+      title: Cobrança Recorrente Gerada
+      required:
+        - idRec
+        - txid
+        - status
+        - valor
+        - recebedor
+        - calendario
+      description: Dados criados ou alterados da cobrança recorrente via API Pix
+      allOf:
+        - type: object
+          properties:
+            idRec:
+              $ref: "#/components/schemas/RecId"
+        - type: object
+          properties:
+            txid:
+              $ref: "#/components/schemas/TxId"
+        - $ref: "#/components/schemas/CobRBase"
+        - type: object
+          properties:
+            calendario:
+              type: object
+              required:
+                - criacao
+              properties:
+                criacao:
+                  type: string
+                  format: date
+                  title: Data de criação da cobrança
+                  description: Trata-se de uma data, no formato `YYYY-MM-DD`, segundo ISO 8601. É
+                    a data de criação da cobrança.
+                  examples:
+                    - 2023-04-01
+        - type: object
+          properties:
+            recebedor:
+              allOf:
+                - $ref: "#/components/schemas/PessoaJuridicaRecorrencia"
+        - $ref: "#/components/schemas/CobRStatus"
+        - $ref: "#/components/schemas/DadosDevedorRecorrencia"
+    CobRCompleta:
+      type: object
+      title: Cobrança Recorrente Completa
+      required:
+        - idRec
+        - txid
+        - status
+        - valor
+        - recebedor
+        - calendario
+      description: Dados completos da cobrança recorrente via API Pix
+      allOf:
+        - type: object
+          properties:
+            idRec:
+              $ref: "#/components/schemas/RecId"
+        - type: object
+          properties:
+            txid:
+              $ref: "#/components/schemas/TxId"
+        - $ref: "#/components/schemas/CobRBase"
+        - type: object
+          properties:
+            calendario:
+              type: object
+              required:
+                - criacao
+              properties:
+                criacao:
+                  type: string
+                  format: date
+                  title: Data de criação da cobrança
+                  description: Trata-se de uma data, no formato `YYYY-MM-DD`, segundo ISO 8601. É
+                    a data de criação da cobrança.
+                  examples:
+                    - 2023-04-01
+        - $ref: "#/components/schemas/CobRStatus"
+        - $ref: "#/components/schemas/CobRConfiguracao"
+        - $ref: "#/components/schemas/DadosDevedorRecorrencia"
+        - type: object
+          properties:
+            pix:
+              type: array
+              title: Pix recebidos
+              items:
+                allOf:
+                  - $ref: "#/components/schemas/PixAutomatico"
+                  - type: object
+                    properties:
+                      txid:
+                        allOf:
+                          - $ref: "#/components/schemas/TxId"
+                          - pattern: "[a-zA-Z0-9]{26,35}"
+        - $ref: "#/components/schemas/CobRAtualizacao"
+        - $ref: "#/components/schemas/CobRTentativas"
+    CobRAtualizacao:
+      type: object
+      title: Histórico de Atualização da Cobrança Recorrente
+      required:
+        - atualizacao
+      properties:
+        atualizacao:
+          type: array
+          title: Histórico de Status
+          description: Histórico das mudanças de status das cobranças recorrentes.
+          items:
+            type: object
+            required:
+              - status
+              - data
+            properties:
+              status:
+                type: string
+                title: Status da cobrança
+                description: Status da cobrança.
+                enum:
+                  - CRIADA
+                  - ATIVA
+                  - CONCLUIDA
+                  - EXPIRADA
+                  - REJEITADA
+                  - CANCELADA
+              data:
+                type: string
+                format: date-time
+                description: Data e hora do registro de status atualizado. Respeita RFC 3339.
+        encerramento:
+          type: object
+          title: Detalhamento do encerramento da cobrança.
+          oneOf:
+            - type: object
+              properties:
+                cancelamento:
+                  type: object
+                  title: Informações sobre o cancelamento da cobrança
+                  required:
+                    - solicitante
+                    - codigo
+                    - descricao
+                  description: Informações sobre o cancelamento da cobrança
+                  properties:
+                    solicitante:
+                      type: string
+                      title: Solicitante do cancelamento
+                      enum:
+                        - PSP_PAGADOR
+                        - USUARIO_PAGADOR
+                        - PSP_RECEBEDOR
+                        - USUARIO_RECEBEDOR
+                    codigo:
+                      type: string
+                      title: Código do cancelamento
+                      description: Código do cancelamento. Corresponde ao código de cancelamento
+                        presente no catálogo de mensagens.
+                      maxLength: 4
+                      enum:
+                        - ACCT
+                        - BLCK
+                        - CCLD
+                        - FAIL
+                        - OTHR
+                        - SLBD
+                        - SLCR
+                    descricao:
+                      type: string
+                      title: Descricao do cancelamento
+                      description: Descricao da causa do cancelamento
+                      maxLength: 400
+            - type: object
+              properties:
+                rejeicao:
+                  type: object
+                  title: Informações sobre a rejeição da cobrança
+                  required:
+                    - codigo
+                    - descricao
+                  description: Informações sobre a rejeição da cobrança
+                  properties:
+                    codigo:
+                      type: string
+                      title: Código da rejeição
+                      description: Código da rejeição. Corresponde ao código de rejeição presente no
+                        catálogo de mensagens.
+                      maxLength: 4
+                      enum:
+                        - AB10
+                        - AC05
+                        - AC06
+                        - AM02
+                        - AM09
+                        - DENC
+                        - DS27
+                        - DTED
+                        - DTNT
+                        - FBRD
+                        - IRNT
+                        - MIDI
+                        - MSUC
+                        - NIEC
+                        - NIPA
+                        - NITX
+                        - QUNT
+                        - RC09
+                        - UDEI
+                    descricao:
+                      type: string
+                      title: Descricao da rejeição
+                      description: Descricao da causa da rejeição
+                      maxLength: 400
+    CobRTentativas:
+      type: object
+      title: Histórico de Tentativas da Cobrança Recorrente
+      properties:
+        tentativas:
+          type: array
+          title: Histórico de Tentativas de Cobrança
+          description: Histórico de Tentativas de Cobrança
+          items:
+            type: object
+            required:
+              - dataLiquidacao
+              - tipo
+              - endToEndId
+              - status
+              - atualizacao
+            properties:
+              dataLiquidacao:
+                type: string
+                format: date
+                description: Data da liquidação da cobrança. Trata-se de uma data, no formato
+                  `YYYY-MM-DD`, segundo ISO 8601.
+                examples:
+                  - 2023-04-01
+              tipo:
+                type: string
+                title: Tipo da Tentativa
+                description: Tipo da tentativa da cobrança.
+                enum:
+                  - AGND
+                  - NTAG
+                  - RIFL
+              status:
+                type: string
+                title: Status da Tentativa
+                description: Status da tentativa da cobrança.
+                enum:
+                  - SOLICITADA
+                  - AGENDADA
+                  - PAGA
+                  - CANCELADA
+                  - REJEITADA
+                  - EXPIRADA
+              endToEndId:
+                $ref: "#/components/schemas/EndToEndId"
+              atualizacao:
+                type: array
+                title: Histórico de Status da Tentativa
+                description: Histórico das mudanças de status da tentativa de cobrança.
+                items:
+                  type: object
+                  required:
+                    - status
+                    - data
+                  properties:
+                    status:
+                      type: string
+                      title: Status da Tentativa
+                      description: Status da tentativa da cobrança.
+                      enum:
+                        - SOLICITADA
+                        - AGENDADA
+                        - PAGA
+                        - CANCELADA
+                        - REJEITADA
+                        - EXPIRADA
+                    data:
+                      type: string
+                      format: date-time
+                      description: Data e hora do registro de status atualizado. Respeita RFC 3339.
+              rejeicao:
+                type: object
+                title: Informações sobre a rejeição da tentativa da cobrança
+                required:
+                  - codigo
+                  - descricao
+                description: Informações sobre a rejeição da tentativa da cobrança
+                properties:
+                  codigo:
+                    type: string
+                    title: Código da rejeição da tentativa
+                    description: Código da rejeição da tentativa. Corresponde ao código de rejeição
+                      presente no catálogo de mensagens. Os códigos de rejeição
+                      da tentativa
+                      `AC05`,`AM09`,`DENC`,`DS27`,`DTED`,`MIDI`,`MSUC`,`NITX`,`RC09`
+                      e `DTED` causam a rejeição da cobrança recorrente
+                      correspondente.
+                    maxLength: 4
+                    enum:
+                      - AB10
+                      - AC05
+                      - AC06
+                      - AM02
+                      - AM09
+                      - DENC
+                      - DS27
+                      - DTED
+                      - DTNT
+                      - FBRD
+                      - IRNT
+                      - MIDI
+                      - MSUC
+                      - NIEC
+                      - NIPA
+                      - NITX
+                      - QUNT
+                      - RC09
+                      - UDEI
+                  descricao:
+                    type: string
+                    title: Descricao da rejeição
+                    description: Descricao da causa da rejeição
+                    maxLength: 400
+    CobRRevisada:
+      type: object
+      title: Cobrança Recorrente Revisada
+      description: Dados enviados para revisão da cobrança recorrente via API Pix
+      allOf:
+        - $ref: "#/components/schemas/CobRStatusRevisada"
+    CobRSolicitada:
+      type: object
+      title: Cobrança Recorrente Solicitada
+      required:
+        - idRec
+        - calendario
+        - valor
+        - recebedor
+      description: Dados enviados para criação da cobrança recorrente via API Pix
+      allOf:
+        - type: object
+          properties:
+            idRec:
+              $ref: "#/components/schemas/RecId"
+        - $ref: "#/components/schemas/CobRBase"
+        - $ref: "#/components/schemas/DadosDevedorRecorrencia"
+    CobRNotification:
+      type: object
+      title: Cobrança Recorrente Notificada
+      required:
+        - idRec
+        - txid
+        - status
+        - atualizacao
+      description: Dados enviados para criação da cobrança recorrente via API Pix
+      allOf:
+        - type: object
+          properties:
+            idRec:
+              $ref: "#/components/schemas/RecId"
+        - type: object
+          properties:
+            txid:
+              $ref: "#/components/schemas/TxId"
+        - $ref: "#/components/schemas/CobRStatus"
+        - $ref: "#/components/schemas/CobRAtualizacao"
+        - $ref: "#/components/schemas/CobRTentativas"
+        - type: object
+          properties:
+            pix:
+              type: array
+              title: Pix recebidos
+              items:
+                allOf:
+                  - $ref: "#/components/schemas/PixAutomatico"
+                  - type: object
+                    properties:
+                      txid:
+                        allOf:
+                          - $ref: "#/components/schemas/TxId"
+                          - pattern: "[a-zA-Z0-9]{26,35}"
+    CobRConfiguracao:
+      type: object
+      title: Configuração da Cobrança Recorrente
+      required:
+        - politicaRetentativa
+      properties:
+        politicaRetentativa:
+          type: string
+          title: Política de retentativa da cobrança recorrente
+          enum:
+            - NAO_PERMITE
+            - PERMITE_3R_7D
+    CobRStatus:
+      type: object
+      title: Status da Cobrança Recorrente
+      properties:
+        status:
+          type: string
+          title: Status do registro da cobrança
+          enum:
+            - CRIADA
+            - ATIVA
+            - CONCLUIDA
+            - EXPIRADA
+            - REJEITADA
+            - CANCELADA
+    CobRStatusRevisada:
+      type: object
+      title: Status da Cobrança Recorrente
+      properties:
+        status:
+          type: string
+          title: Status do registro da cobrança
+          enum:
+            - CANCELADA
+    CobRBase:
+      type: object
+      title: Cobrança Recorrente Base
+      required:
+        - ajusteDiaUtil
+      description: Atributos de cobrança recorrente
+      properties:
+        infoAdicional:
+          type: string
+          title: Informações adicionais da fatura.
+          description: Informações adicionais da fatura.
+          maxLength: 140
+        calendario:
+          type: object
+          title: Informações sobre calendário da cobrança
+          required:
+            - dataDeVencimento
+          description: ""
+          properties:
+            dataDeVencimento:
+              type: string
+              format: date
+              title: Data de vencimento da cobrança
+              description: Trata-se de uma data, no formato `YYYY-MM-DD`, segundo ISO 8601. Ã‰
+                a data de vencimento da cobranÃ§a.
+              examples:
+                - 2023-04-01
+        valor:
+          type: object
+          title: Valor da cobrança recorrente
+          required:
+            - original
+          description: Valor da cobrança recorrente
+          properties:
+            original:
+              type: string
+              title: Valor
+              pattern: \d{1,10}\.\d{2}
+              description: Valor original da cobrança.
+        ajusteDiaUtil:
+          type: boolean
+          title: Ajuste data prevista para liquidação para próximo dia útil
+          default: true
+          description: Campo de ativação do ajuste da data prevista para liquidação para
+            próximo dia útil caso o vencimento corrente seja um dia não útil. O
+            PSP Recebedor deverá considerar os feriados locais com base no
+            código município do usuário pagador.
+        recebedor:
+          description: O objeto recebedor organiza as informações sobre o recebedor da
+            cobrança.
+          allOf:
+            - $ref: "#/components/schemas/DadosBancariosRecebedor"
+    PayloadLocationRecSolicitada:
+      type: object
+      title: Location do Payload Solicitada
+      description: Identificador da localização do payload solicitada.
+      required:
+        - tipo
+      properties:
+        tipo:
+          type: string
+          title: Tipo da cobrança
+          enum:
+            - rec
+    PayloadLocationRecGerada:
+      type: object
+      title: Location do Payload Completa
+      description: Identificador da localização do payload completo.
+      required:
+        - id
+        - location
+        - tipo
+        - criacao
+      properties:
+        id:
+          $ref: "#/components/schemas/PayloadLocationRecId"
+        location:
+          type: string
+          title: Localização do payload
+          description: Localização do Payload a ser informada na criação da recorrência.
+          maxLength: 77
+          format: uri
+          readOnly: true
+          examples:
+            - pix.example.com/qr/v2/rec/2353c790eefb11eaadc10242ac120002
+        criacao:
+          type: string
+          format: date-time
+          title: Data de Criação
+          description: Data e hora em que a location foi criada. Respeita RFC 3339.
+          readOnly: true
+    PayloadLocationRecCompleta:
+      type: object
+      title: Location do Payload Completa
+      description: Identificador da localização do payload completo.
+      allOf:
+        - $ref: "#/components/schemas/PayloadLocationRecGerada"
+        - type: object
+          properties:
+            idRec:
+              $ref: "#/components/schemas/RecId"
+    ParametrosConsultaRec:
+      type: object
+      title: Parâmetros de Consulta de Recorrências
+      description: Parâmetros utilizados para a realização de uma consulta de recorrências.
+      required:
+        - inicio
+        - fim
+        - paginacao
+      properties:
+        inicio:
+          type: string
+          format: date-time
+          title: Data de Início
+          description: Data inicial utilizada na consulta. Respeita RFC 3339.
+          examples:
+            - 2020-04-01T00:00:00Z
+        fim:
+          type: string
+          format: date-time
+          title: Data de Fim
+          description: Data de fim utilizada na consulta. Respeita RFC 3339.
+          examples:
+            - 2020-04-01T17:00:00Z
+        cpf:
+          type: string
+          title: CPF
+          pattern: /^\d{11}$/
+          description: Filtro pelo CPF do devedor. Não pode ser utilizado ao mesmo tempo
+            que o CNPJ.
+        cnpj:
+          type: string
+          title: CNPJ
+          pattern: ^[0-9A-Z]{14}$
+          description: Filtro pelo CNPJ do devedor. Não pode ser utilizado ao mesmo tempo
+            que o CPF.
+        locationPresente:
+          type: boolean
+          description: Filtro pela existência de location vinculada.
+        status:
+          type: string
+          title: Status do registro da recorrência
+          description: Filtro pelo status das recorrências.
+        recebedor:
+          type: object
+          title: Recebedor
+          properties:
+            convenio:
+              type: string
+              title: Convênio
+              description: Convênio entre usuário e participante recebedor.
+              maxLength: 60
+        paginacao:
+          $ref: "#/components/schemas/Paginacao"
+    ParametrosConsultaCobR:
+      type: object
+      title: Parâmetros de Consulta de Cobrança
+      description: Parâmetros utilizados para a realização de uma consulta de cobranças.
+      required:
+        - inicio
+        - fim
+        - paginacao
+      properties:
+        inicio:
+          type: string
+          format: date-time
+          title: Data de Início
+          description: Data inicial utilizada na consulta. Respeita RFC 3339.
+          examples:
+            - 2020-04-01T00:00:00Z
+        fim:
+          type: string
+          format: date-time
+          title: Data de Fim
+          description: Data de fim utilizada na consulta. Respeita RFC 3339.
+          examples:
+            - 2020-04-01T17:00:00Z
+        idRec:
+          $ref: "#/components/schemas/RecId"
+        cpf:
+          type: string
+          title: CPF
+          pattern: /^\d{11}$/
+          description: Filtro pelo CPF do devedor. Não pode ser utilizado ao mesmo tempo
+            que o CNPJ.
+        cnpj:
+          type: string
+          title: CNPJ
+          pattern: ^[0-9A-Z]{14}$
+          description: Filtro pelo CNPJ do devedor. Não pode ser utilizado ao mesmo tempo
+            que o CPF.
+        status:
+          type: string
+          title: Status do registro da cobrança
+          description: Filtro pelo status das cobranças.
+        recebedor:
+          type: object
+          title: Recebedor
+          properties:
+            convenio:
+              type: string
+              title: Convênio
+              description: Convênio entre usuário e participante recebedor.
+              maxLength: 60
+        paginacao:
+          $ref: "#/components/schemas/Paginacao"
+    CobsRConsultadas:
+      type: object
+      title: Cobranças recorrentes consultadas
+      required:
+        - parametros
+        - cobsr
+      properties:
+        parametros:
+          $ref: "#/components/schemas/ParametrosConsultaCobR"
+        cobsr:
+          type: array
+          title: Lista de cobranças
+          items:
+            allOf:
+              - $ref: "#/components/schemas/CobRCompleta"
+    RecsConsultadas:
+      type: object
+      title: Recorrencias consultadas
+      required:
+        - parametros
+        - recs
+      properties:
+        parametros:
+          $ref: "#/components/schemas/ParametrosConsultaRec"
+        recs:
+          type: array
+          title: Lista de recorrências
+          items:
+            allOf:
+              - $ref: "#/components/schemas/RecCompletaPesquisada"
+    PixAutomatico:
+      type: object
+      title: Pix
+      required:
+        - txid
+        - endToEndId
+        - valor
+        - horario
+      properties:
+        endToEndId:
+          $ref: "#/components/schemas/EndToEndId"
+        txid:
+          allOf:
+            - $ref: "#/components/schemas/TxId"
+            - pattern: "[a-zA-Z0-9]{1,35}"
+        valor:
+          type: string
+          title: Valor do Pix.
+          pattern: \d{1,10}\.\d{2}
+          description: Valor do Pix.
+          anyOf:
+            - $ref: "#/components/schemas/PixValorOriginal"
+            - $ref: "#/components/schemas/PixValorJuros"
+            - $ref: "#/components/schemas/PixValorMulta"
+            - $ref: "#/components/schemas/PixValorAbatimento"
+            - $ref: "#/components/schemas/PixValorDesconto"
+        horario:
+          type: string
+          format: date-time
+          title: Horário
+          description: Horário em que o Pix foi processado no PSP.
+        infoPagador:
+          type: string
+          title: Informação livre do pagador
+          maxLength: 140
+        devolucoes:
+          type: array
+          title: Devoluções
+          items:
+            $ref: "#/components/schemas/DevolucaoPixAutomatico"
+    DevolucaoPixAutomatico:
+      type: object
+      title: Devolução
+      required:
+        - id
+        - rtrId
+        - valor
+        - horario
+        - status
+      properties:
+        id:
+          $ref: "#/components/schemas/DevolucaoId"
+        rtrId:
+          type: string
+          title: RtrId
+          description: ReturnIdentification que transita na PACS004.
+          pattern: "[a-zA-Z0-9]{32}"
+          minLength: 32
+          maxLength: 32
+          examples:
+            - D12345678202009091000abcde123456
+        valor:
+          type: string
+          title: Valor a devolver.
+          pattern: \d{1,10}\.\d{2}
+          description: Valor a devolver.
+        natureza:
+          $ref: "#/components/schemas/DevolucaoNaturezaPixAutomatico"
+        descricao:
+          type: string
+          title: Mensagem ao pagador relativa à devolução.
+          maxLength: 140
+          description: O campo `descricao`, opcional, determina um texto a ser apresentado
+            ao pagador contendo informações sobre a devolução. Esse texto será
+            preenchido, na pacs.004, pelo PSP do recebedor, no campo
+            RemittanceInformation. O tamanho do campo na pacs.004 está limitado
+            a 140 caracteres.
+        horario:
+          type: object
+          properties:
+            solicitacao:
+              type: string
+              format: date-time
+              title: Horário de solicitação
+              description: Horário no qual a devolução foi solicitada no PSP.
+            liquidacao:
+              type: string
+              format: date-time
+              title: Horário de liquidação
+              description: Horário no qual a devolução foi liquidada no PSP.
+        status:
+          type: string
+          title: Status
+          description: Status da devolução.
+          enum:
+            - EM_PROCESSAMENTO
+            - DEVOLVIDO
+            - NAO_REALIZADO
+        motivo:
+          type: string
+          title: Descrição do status.
+          description: >
+            # Status da Devolução
+
+
+            Campo opcional que pode ser utilizado pelo PSP recebedor para
+            detalhar os motivos
+
+            de a devolução ter atingido o status em questão.
+
+            Pode ser utilizado, por exemplo, para detalhar o motivo de a
+            devolução não ter sido realizada.
+          maxLength: 140
+    ParametrosConsultaPayloadLocationRec:
+      type: object
+      title: Parâmetros de consulta de locations
+      description: Parâmetros utilizados para a realização de uma consulta de locations.
+      required:
+        - inicio
+        - fim
+        - paginacao
+      properties:
+        inicio:
+          type: string
+          format: date-time
+          title: Data de Início
+          description: Data inicial utilizada na consulta. Respeita RFC 3339.
+          examples:
+            - 2020-01-01T00:00:00Z
+        fim:
+          type: string
+          format: date-time
+          title: Data de Fim
+          description: Data de fim utilizada na consulta. Respeita RFC 3339.
+          examples:
+            - 2020-12-01T17:00:00Z
+        idRecPresente:
+          type: boolean
+          description: Filtro pela existência de id da recorrência.
+        recebedor:
+          type: object
+          title: Recebedor
+          properties:
+            convenio:
+              type: string
+              title: Convênio
+              description: Convênio entre usuário e participante recebedor.
+              maxLength: 60
+        paginacao:
+          $ref: "#/components/schemas/Paginacao"
+    PayloadLocationRecConsultadas:
+      type: object
+      title: Locations Consultadas
+      required:
+        - parametros
+        - loc
+      properties:
+        parametros:
+          $ref: "#/components/schemas/ParametrosConsultaPayloadLocationRec"
+        loc:
+          type: array
+          title: Lista de locations cadastradas
+          items:
+            allOf:
+              - $ref: "#/components/schemas/PayloadLocationRecCompleta"
+    ParametrosConsultaWebhooks:
+      type: object
+      title: Parâmetros de Consulta de Webhooks
+      description: Parâmetros utilizados para a realização de uma consulta de Webhooks.
+      properties:
+        inicio:
+          type: string
+          format: date-time
+          title: Data de Início
+          description: Data inicial utilizada na consulta. Respeita RFC 3339.
+          examples:
+            - 2020-01-01T00:00:00Z
+        fim:
+          type: string
+          format: date-time
+          title: Data de Fim
+          description: Data de fim utilizada na consulta. Respeita RFC 3339.
+          examples:
+            - 2020-12-01T17:00:00Z
+        paginacao:
+          $ref: "#/components/schemas/Paginacao"
+    WebhooksRecConsultados:
+      type: object
+      title: Webhooks de Recorrências Consultados
+      required:
+        - webhooksrec
+      properties:
+        parametros:
+          $ref: "#/components/schemas/ParametrosConsultaWebhooks"
+        webhooksrec:
+          type: array
+          title: Lista de Webhooks de Recorrências consultados
+          items:
+            allOf:
+              - $ref: "#/components/schemas/WebhookRecCompleto"
+    Paginacao:
+      type: object
+      title: Paginação
+      required:
+        - paginaAtual
+        - itensPorPagina
+        - quantidadeDePaginas
+        - quantidadeTotalDeItens
+      properties:
+        paginaAtual:
+          type: integer
+          title: Página atual
+          description: Número da página recuperada.
+          minimum: 0
+        itensPorPagina:
+          type: integer
+          title: Itens por página
+          description: Quantidade de registros retornado na página.
+          minimum: 1
+        quantidadeDePaginas:
+          type: integer
+          title: Quantidade de páginas
+          description: Quantidade de páginas disponíveis para consulta.
+          minimum: 1
+        quantidadeTotalDeItens:
+          type: integer
+          title: Quantidade total de itens
+          description: Quantidade total de itens disponíveis de acordo com os parâmetros
+            informados.
+          minimum: 0
+    Violacao:
+      type: object
+      title: Violações
+      properties:
+        razao:
+          type: string
+          title: Descrição do erro
+          description: Descrição do erro
+          examples:
+            - Valor da cobrança não pode ser 0.00
+        propriedade:
+          type: string
+          title: Nome da propriedade
+          description: Nome da propriedade
+          examples:
+            - cob.chave
+        valor:
+          type: string
+          title: Valor da propriedade
+          description: Valor da propriedade
+          examples:
+            - "061996671234"
+    Problema:
+      type: object
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          format: uri
+          description: URI de referência que identifica o tipo de problema. De acordo com
+            a RFC 7807.
+          examples:
+            - https://pix.bcb.gov.br/api/v2/error/NaoEncontrado
+        title:
+          type: string
+          description: Descrição resumida do problema.
+          examples:
+            - Not found
+        status:
+          type: integer
+          description: Código HTTP do status retornado.
+          examples:
+            - 404
+        detail:
+          type: string
+          description: Descrição completa do problema.
+        correlationId:
+          type: string
+          description: Identificador de correlação do problema para fins de suporte
+        violacoes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Violacao"
+    Inicio:
+      type: string
+      format: date-time
+      title: Data de início
+      description: Filtra os registros cuja data de criação seja maior ou igual que a
+        data de início. Respeita RFC 3339.
+    Fim:
+      type: string
+      format: date-time
+      title: Data de fim
+      description: Filtra os registros cuja data de criação seja menor ou igual que a
+        data de fim. Respeita RFC 3339.
+  parameters:
+    Authorization:
+      in: header
+      name: Authorization
+      description: Token de acesso para autenticação. Deve ser enviado no formato
+        "Bearer {{your_access_token}}".
+      schema:
+        type: string
+      required: true
+      examples:
+        default:
+          value: Bearer {{your_access_token}}
+    paginaAtual:
+      in: query
+      name: paginacao.paginaAtual
+      required: false
+      schema:
+        type: integer
+        format: int32
+        title: Página atual
+        minimum: 0
+        default: 0
+        description: Página a ser retornada pela consulta. Se não for informada, o PSP
+          assumirá que será 0.
+    itensPorPagina:
+      in: query
+      name: paginacao.itensPorPagina
+      required: false
+      schema:
+        type: integer
+        format: int32
+        title: Itens por Página
+        minimum: 1
+        maximum: 1000
+        default: 100
+        description: Quantidade máxima de registros retornados em cada página. Apenas a
+          última página pode conter uma quantidade menor de registros.
+  responses:
+    RequisicaoInvalida:
+      description: Problemas na requisição.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problema"
+    NaoEncontrado:
+      description: Recurso solicitado não foi encontrado.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problema"
+          examples:
+            exemplo1:
+              $ref: "#/components/examples/NaoEncontradoExample1"
+    AcessoNegado:
+      description: Requisição de participante autenticado que viola alguma regra de
+        autorização.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problema"
+          examples:
+            exemplo1:
+              $ref: "#/components/examples/AcessoNegadoExample1"
+    ServicoIndisponivel:
+      description: Serviço não está disponível no momento. Serviço solicitado pode
+        estar em manutenção ou fora da janela de funcionamento.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problema"
+          examples:
+            exemplo1:
+              $ref: "#/components/examples/ServicoIndisponivelExample1"

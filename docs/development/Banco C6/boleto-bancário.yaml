@@ -1,0 +1,768 @@
+openapi: 3.1.1
+info:
+  title: Boleto bancário
+  version: 1.7.2
+  description: |-
+    ## O que esta API permite?
+    O boleto bancário é um formato de cobrança utilizado para solicitar o pagamento de produtos ou serviços. Ele pode ser pago em qualquer banco, seja nos caixas eletrônicos, nas agências, por aplicativo ou internet banking.
+
+    Nossa API de boletos entrega informações de cadastro referente à cobrança emitida, tais como:
+    - Emissor e seus dados
+    - Destinatário e seus dados
+    - Valor da cobrança
+    - Data de vencimento
+    - Descontos, juros e multas
+    - Linha digitável
+    - Código de barras
+
+    A API também permite que o emissor acompanhe o status da cobrança. Quando o pagamento é realizado, o valor é transferido diretamente para a conta do emissor. É possível configurar lembretes de cobrança. Caso o pagamento não seja feito, o boleto pode ser usado para ações de negativação e protesto nos órgãos responsáveis.
+
+    A API permite que desenvolvedores se integrem ao C6 Bank para realizar as seguintes operações:
+
+    - Emissão de um boleto bancário
+    - Acréscimo de juros e multa ao valor inicial para pagamento pós vencimento
+    - Concessão de desconto por antecipação do pagamento
+    - Consulta de um boleto bancário previamente emitido
+    - Download do boleto bancário emitido em formato PDF
+    - Alterações em um boleto bancário previamente emitido
+    - Baixa de um boleto bancário emitido e não pago
+
+    ## Carteiras
+
+    O C6 Bank oferece duas carteiras de cobrança:
+
+    Carteira para **produção** sendo a carteira do número: 15
+
+    Carteira para **sandbox** sendo a carteira do número: 21
+
+    Lembre-se alterar ao utilizar quando copiar o cURL ou mudar de ambiente, pois as carteiras são diferentes.
+
+    ## Informações úteis:
+    - [Termos de uso (ao usar essa API você concorda com estes termos)](https://www.c6bank.com.br/termos-de-uso/)
+    - [Saiba mais sobre o C6 Bank](https://www.c6bank.com)
+    - [Saiba mais sobre esse produto C6 Bank](https://www.c6bank.com.br/maquininha-de-cartao-c6-pay/)
+
+    <br>
+
+    ________________
+
+    ## **Resumo Técnico da API**
+
+    Operações disponíveis para esta API:
+
+    | Operações                                                                      |
+    |:------------------------------------------------------------------------------:|
+    | [Emitir boleto](./bankslip#tag/api-de-boleto/post/)                            |
+    | [Alterar boleto](./bankslip#tag/api-de-boleto/put/{id})                        |
+    | [Consultar boleto](./bankslip#tag/api-de-boleto/get/{id})                      |
+    | [Cancelar boleto](./bankslip#tag/api-de-boleto/put/{id}/cancel)                |
+    | [Fazer download de boleto (em PDF)](./bankslip#tag/api-de-boleto/get/{id}/pdf) |
+
+    Endereço dos ambientes:
+
+    | Ambiente | Host                                 | Path            |
+    |:--------:|------------------------------------- |-----------------|
+    | Sandbox  | https://baas-api-sandbox.c6bank.info | /v1/bank_slips/ |
+    | Produção | https://baas-api.c6bank.info         | /v1/bank_slips/ |
+tags:
+  - name: API de Boleto
+    description: Operações de boleto
+paths:
+  /:
+    post:
+      operationId: emitirBoleto
+      tags:
+        - API de Boleto
+      summary: Emitir boleto
+      description: Emite um novo boleto bancário
+      parameters:
+        - $ref: "#/components/parameters/PartnerSoftwareName"
+        - $ref: "#/components/parameters/PartnerSoftwareVersion"
+        - $ref: "#/components/parameters/Authorization"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/bank_slip_create_request"
+        required: true
+      responses:
+        "201":
+          description: Boleto emitido com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/bank_slip_create_response"
+        4xx:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+        5xx:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+  /{id}:
+    parameters:
+      - $ref: "#/components/parameters/PartnerSoftwareName"
+      - $ref: "#/components/parameters/PartnerSoftwareVersion"
+      - $ref: "#/components/parameters/Authorization"
+    put:
+      tags:
+        - API de Boleto
+      summary: Alterar boleto
+      description: Altera informações em um boleto já emitido
+      parameters:
+        - $ref: "#/components/parameters/Bank_Slip_Id"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/bank_slip_alter_request"
+        required: true
+      responses:
+        "200":
+          description: Boleto alterado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/bank_slip_response"
+        4xx:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+        5xx:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+    get:
+      tags:
+        - API de Boleto
+      summary: Consultar boleto
+      parameters:
+        - $ref: "#/components/parameters/Bank_Slip_Id"
+        - $ref: "#/components/parameters/ContentType"
+      responses:
+        "200":
+          description: Boleto obtido com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/bank_slip_response"
+        4xx:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+        5xx:
+          description: Para descrição de erros visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+  /{id}/pdf:
+    get:
+      tags:
+        - API de Boleto
+      summary: Gerar PDF de boleto
+      parameters:
+        - $ref: "#/components/parameters/PartnerSoftwareName"
+        - $ref: "#/components/parameters/PartnerSoftwareVersion"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/Bank_Slip_Id"
+        - $ref: "#/components/parameters/ContentType"
+      responses:
+        "200":
+          description: Boleto obtido com sucesso. No corpo do response body será possível
+            visualizar o PDF do boleto
+        4xx:
+          description: Para descrição de erros, visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+        5xx:
+          description: Para descrição de erros, visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+  /{id}/cancel:
+    put:
+      tags:
+        - API de Boleto
+      summary: Cancelar boleto
+      description: Um boleto cancelado deixa de estar disponível para pagamento.
+      parameters:
+        - $ref: "#/components/parameters/PartnerSoftwareName"
+        - $ref: "#/components/parameters/PartnerSoftwareVersion"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/Bank_Slip_Id"
+        - $ref: "#/components/parameters/ContentType"
+      responses:
+        "204":
+          description: Boleto cancelado com sucesso
+        4xx:
+          description: Para descrição de erros, visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+        5xx:
+          description: Para descrição de erros, visite a <a
+            href="https://developers.c6bank.com.br/apis/errors">documentação
+            correspondente</a>.
+servers:
+  - url: https://baas-api-sandbox.c6bank.info/v1/bank_slips
+    description: Ambiente sandbox
+  - url: https://baas-api.c6bank.info/v1/bank_slips
+    description: Ambiente produtivo
+components:
+  parameters:
+    Authorization:
+      in: header
+      name: Authorization
+      description: Token de acesso para autenticação. Deve ser enviado no formato
+        "Bearer {{your_access_token}}".
+      schema:
+        type: string
+      required: true
+      examples:
+        default:
+          value: Bearer {{your_access_token}}
+    ContentType:
+      in: header
+      name: Content-Type
+      description: Tipo do conteúdo da requisição
+      schema:
+        type: string
+      required: true
+      examples:
+        default:
+          value: application/x-www-form-urlencoded
+    PartnerSoftwareName:
+      in: header
+      name: partner-software-name
+      description: Nome do software do parceiro
+      schema:
+        type: string
+      required: false
+      examples:
+        default:
+          value: Super PDV
+    PartnerSoftwareVersion:
+      in: header
+      name: partner-software-version
+      description: Versão do software do parceiro
+      schema:
+        type: string
+      required: false
+      examples:
+        default:
+          value: 1.0.0
+    Bank_Slip_Id:
+      in: path
+      name: id
+      description: É o identificador único e principal da transação no ambiente do C6
+        Bank. Além disso, é utilizado em operações como consulta, cancelamento e
+        alteração.
+      schema:
+        type: string
+      required: true
+      examples:
+        default:
+          value: 01J3NCKY6Q99QC4D7T733D35QD
+  schemas:
+    address:
+      type: object
+      description: Representa o endereço da parte pagadora do título, ou seja, o
+        destinatário do boleto. Este elemento reúne todas as informações do
+        endereço do cliente pagador.
+      required:
+        - city
+        - number
+        - state
+        - street
+        - zip_code
+      properties:
+        street:
+          type: string
+          maxLength: 33
+          description: Nome da rua do endereço do cliente pagador (devedor). A quantidade
+            total de caracteres deste campo e do campo "number" somadas não
+            podem ultrapassar 40 posições.
+          examples:
+            - Av. Nove de Julho
+        number:
+          type: number
+          description: Número do endereço da parte pagadora (devedor). A soma dos
+            caracteres deste campo com os do campo 'street' não pode ultrapassar
+            40 caracteres.
+          examples:
+            - 123
+        complement:
+          type: string
+          maxLength: 24
+          description: Complemento do endereço do cliente pagador (devedor).
+          examples:
+            - Complemento
+        city:
+          type: string
+          maxLength: 40
+          description: Cidade do endereço do cliente pagador (devedor).
+          examples:
+            - Rio de Janeiro
+        state:
+          type: string
+          maxLength: 2
+          pattern: "[A-Z]{2}"
+          description: UF do endereço do cliente pagador (devedor).
+          examples:
+            - RJ
+        zip_code:
+          type: string
+          minLength: 8
+          maxLength: 8
+          pattern: \d{8}
+          description: CEP do endereço do cliente pagador (devedor).
+          examples:
+            - "05093000"
+    amount:
+      type: number
+      description: Define o valor principal do boleto.
+      examples:
+        - 123.45
+    bank_slip_alter_request:
+      type: object
+      minProperties: 1
+      properties:
+        amount:
+          $ref: "#/components/schemas/amount"
+        due_date:
+          $ref: "#/components/schemas/due_date"
+        discount:
+          $ref: "#/components/schemas/discount"
+        interest:
+          $ref: "#/components/schemas/interest"
+        fine:
+          $ref: "#/components/schemas/fine"
+    bank_slip_create_request:
+      type: object
+      required:
+        - external_reference_id
+        - amount
+        - due_date
+        - payer
+      properties:
+        external_reference_id:
+          $ref: "#/components/schemas/external_reference_id"
+        amount:
+          $ref: "#/components/schemas/amount"
+        due_date:
+          $ref: "#/components/schemas/due_date"
+        instructions:
+          $ref: "#/components/schemas/instructions"
+        discount:
+          $ref: "#/components/schemas/discount"
+        interest:
+          $ref: "#/components/schemas/interest"
+        fine:
+          $ref: "#/components/schemas/fine"
+        billing_scheme:
+          $ref: "#/components/schemas/billing_scheme"
+        our_number:
+          $ref: "#/components/schemas/our_number"
+        payer:
+          $ref: "#/components/schemas/payer"
+    bank_slip_create_response:
+      type: object
+      properties:
+        amount:
+          $ref: "#/components/schemas/amount"
+        due_date:
+          $ref: "#/components/schemas/due_date"
+        originator_id:
+          $ref: "#/components/schemas/originator_id"
+        our_number:
+          $ref: "#/components/schemas/our_number"
+        billing_scheme:
+          $ref: "#/components/schemas/billing_scheme"
+        billing_type:
+          $ref: "#/components/schemas/billing_type"
+        id:
+          $ref: "#/components/schemas/id"
+        bar_code:
+          $ref: "#/components/schemas/bar_code"
+        digitable_line:
+          $ref: "#/components/schemas/digitable_line"
+    bank_slip_response:
+      type: object
+      properties:
+        id:
+          $ref: "#/components/schemas/id"
+        originator_id:
+          $ref: "#/components/schemas/originator_id"
+        external_reference_id:
+          $ref: "#/components/schemas/external_reference_id"
+        amount:
+          $ref: "#/components/schemas/amount"
+        status:
+          $ref: "#/components/schemas/status"
+        emission_date:
+          $ref: "#/components/schemas/emission_date"
+        due_date:
+          $ref: "#/components/schemas/due_date"
+        instructions:
+          $ref: "#/components/schemas/instructions"
+        payments:
+          $ref: "#/components/schemas/payments"
+        internal_id:
+          $ref: "#/components/schemas/internal_id"
+        billing_scheme:
+          $ref: "#/components/schemas/billing_scheme"
+        billing_type:
+          $ref: "#/components/schemas/billing_type"
+        digitable_line:
+          $ref: "#/components/schemas/digitable_line"
+        bar_code:
+          $ref: "#/components/schemas/bar_code"
+        discount:
+          $ref: "#/components/schemas/discount"
+        interest:
+          $ref: "#/components/schemas/interest"
+        fine:
+          $ref: "#/components/schemas/fine"
+        our_number:
+          $ref: "#/components/schemas/our_number"
+        payer:
+          $ref: "#/components/schemas/payer"
+        base64_pdf_file:
+          $ref: "#/components/schemas/base64_pdf_file"
+    bar_code:
+      type: string
+      readOnly: true
+      description: Código de barras do boleto.
+      examples:
+        - "33695969000000123450000003048720009224128213"
+    base64_pdf_file:
+      type: string
+      description: Arquivo PDF do boleto codificado em Base64
+      examples:
+        - JVBERi0xLjUKJeLjz9MKMyAwIG9iago8PC9Db2xvclNwYWNlL0RldmljZUdyYXkvU3VidHlwZS9JbWFnZS9IZWlnaHQgODAvRmlsdGVyL0ZsYXRlRGVjb2RlL1R5cGUvWE9iamVjdC9XaWR0aCAxODgvTGVuZ3RoIDEyMDMvQml0c1BlckNvbXBvbmVudCA4Pj5zdHJlYW0KeJztmOGZqygUhqED7UA7SDowDexkKhg7iFtBrOBqBTdWsG4FQwUbOwgdxA7iVRA55wDOnV/7PLt8f2YChLzAOZ8HGYuKioqKioqKioqKioqKior6j6q43OQ4TZMUbfFvs3xLyXWYgOQtc8dktv8DdXT2e+LD/R7jXU1bnp75+eOg/4qSdPSfO+iXcaK6OoP6re+GO7quMLpI6VJx+aQt0z3xsBd+9uvDHWyUCId82UMCUdou0oO2tXbhS/ksKPv447fZrw9nxk2Z9KFTeDCqJhPgkGgHyiQ+2oY0vd7pcoLs5fPwbXQC39hmOgNmT0ZClb+y0xOfOn9llbObfvbjs2RBDSH0aRrsL4JEdbaBpGJL0qH6nHEqys4FTUAvey5rFtQ1jA6jwx7OzZmCsJc4aPjjQ/...
+      contentEncoding: base64
+    billing_scheme:
+      type: string
+      description: É o código da carteira de cobrança utilizada. Carteira 15 =
+        Produção e Carteira 21 = Sandbox.
+      examples:
+        - "15"
+    billing_type:
+      type: string
+      readOnly: true
+      description: Identifica se a cobrança é gerada pelo banco ou pelo emitente. 3 -
+        para cobrança registrada com emissão pelo banco 4 - para cobrança direta
+        com emissão pelo emitente
+      enum:
+        - "3"
+        - "4"
+    digitable_line:
+      type: string
+      readOnly: true
+      description: Linha digitável do boleto.
+      examples:
+        - 33690.00009   03048.720001   92241.282133   5   96900000012345
+    discount:
+      type: object
+      description: Objeto para configurar descontos automáticos em caso de pagamento
+        antecipado do boleto. É possível definir até três descontos, conforme o
+        tempo de antecipação do pagamento. Vale lembrar que o prazo para
+        concessão do desconto (dead_line) deve ser decrescente, do primeiro ao
+        terceiro desconto.
+      properties:
+        discount_type:
+          type: string
+          enum:
+            - V
+            - P
+          description: Informa se o desconto é em Valor "V" (value) ou em Percentual "P"
+            (percentage).
+          examples:
+            - V
+        first:
+          $ref: "#/components/schemas/discount_details"
+        second:
+          $ref: "#/components/schemas/discount_details"
+        third:
+          $ref: "#/components/schemas/discount_details"
+    discount_details:
+      type: object
+      description: Objeto utilizado para controle dos detalhes do desconto.
+      properties:
+        value:
+          type: number
+          description: Valor ou percentual do desconto por pagamento antecipado.
+          examples:
+            - 10
+        dead_line:
+          type: integer
+          description: Prazo, em dias, para a aplicação do desconto por pagamento
+            antecipado, contado de forma retroativa a partir da data de
+            vencimento do título. Por exemplo, se o título vence no dia 20 e o
+            desconto é válido para pagamentos realizados até 5 dias antes, ele
+            será aplicado até o dia 15. O C6 Bank permite configurar até três
+            faixas de desconto para um mesmo título. A primeira chave de
+            desconto 'First' deve ser sempre a maior, e a terceira chave de
+            desconto 'Third' deve ser sempre a menor. Os deadlines para First,
+            Second e Third não podem ter o mesmo valor.
+          examples:
+            - 10
+    due_date:
+      type: string
+      format: date
+      description: Data de vencimento do título. Na geração do título, deve ser igual
+        ou maior que a data atual.
+      examples:
+        - 2025-06-11
+    emission_date:
+      type: string
+      format: date
+      readOnly: true
+      description: Data da criação do título.
+      examples:
+        - 2023-11-22
+    external_reference_id:
+      type: string
+      pattern: ^[a-zA-Z0-9]{1,10}$
+      required: true
+      minLength: 1
+      maxLength: 10
+      description: É o identificador utilizado pelo parceiro externo. Embora o C6 Bank
+        não faça a validação desse campo, ele deve ser único para cada cliente.
+        Esse identificador é enviado e retornado nas operações de consulta. Crie
+        um que siga as regras
+      examples:
+        - A123456789
+    fine:
+      type: object
+      description: >
+        A multa por atraso é cobrada **uma única vez**, no início do atraso,
+        conforme o prazo definido.
+
+        Se o tipo for "P", o valor será um percentual do título.
+
+        Se o tipo for "V", o valor será fixo.
+
+        A multa será aplicada **apenas uma vez**, independentemente do número de
+        dias em atraso.
+      properties:
+        type:
+          type: string
+          description: >
+            Informa se a multa por atraso deve ser calculada em Valor "V"
+            (value)
+
+            ou em Percentual "P" (percentage). A multa será aplicada **uma única
+            vez**,
+
+            após o período definido no "dead_line".
+          examples:
+            - V
+        value:
+          type: number
+          description: >
+            Valor ou percentual da multa por atraso.
+
+            Se o tipo for "V", será um valor fixo, e se for "P", será um
+            percentual do título.
+          examples:
+            - 10
+        dead_line:
+          type: integer
+          description: Prazo em dias para início da cobrança da multa por atraso. A
+            cobrança da multa começa após o vencimento do título e o prazo para
+            aplicação começa a contar a partir deste prazo. Se o "dead_line" for
+            0, os juros começam a ser cobrados no dia seguinte ao vencimento do
+            título.
+          examples:
+            - 10
+    id:
+      type: string
+      readOnly: false
+      description: Utilizado como identificador forte do título. Também é utilizado em
+        operações de consulta, cancelamento, alteração, etc. É a principal chave
+        da transação para o ambiente C6 Bank.
+      examples:
+        - "{{token}}"
+    instructions:
+      type: array
+      items:
+        type: string
+      description: Instruções para o operador de caixa, visíveis no boleto. São
+        suportadas no máximo 4 instruções e cada instrução pode conter até 80
+        caracteres.
+      examples:
+        - - Não receber após o vencimento
+          - str2
+          - str3
+          - str4
+    internal_id:
+      type: string
+      readOnly: true
+      description: Identificador interno do boleto.
+      examples:
+        - A1234
+    interest:
+      type: object
+      description: Objeto utilizado para controle de aplicação de juros por pagamento
+        do título em atraso.
+      properties:
+        type:
+          type: string
+          description: >
+            Se o tipo for "P" (percentual), o valor dos juros será calculado com
+            base no percentual mensal informado,
+
+            e o cálculo diário será feito dividindo o percentual mensal por 30
+            (dias do mês).
+
+            Exemplo: Se os juros forem 10% ao mês, o cálculo diário será de 10%
+            / 30 = 0,33% ao dia.
+
+            Assim, para cada dia de atraso, será cobrado 0,33% do valor do
+            título.
+
+            Se o tipo for "V" (Valor), significa que os juros serão cobrados
+            como um valor fixo por dia de atraso,
+
+            e não de forma percentual sobre o valor do título.
+
+            Exemplo: Se o tipo for "V" e o valor do juros diário for R$ 1,00,
+
+            isso significa que, para cada dia de atraso, o valor de R$ 1,00 será
+            acrescido ao total devido.
+          examples:
+            - V
+        value:
+          type: number
+          description: >
+            Valor ou percentual dos juros por atraso.
+
+            Se o tipo for "V", esse valor será fixo por dia. Se for "P", o valor
+            é um percentual do título,
+
+            e será dividido por 30 para calcular o valor diário.
+          examples:
+            - 10
+        dead_line:
+          type: integer
+          description: >
+            Prazo em dias para início da cobrança dos juros por atraso.
+
+            A cobrança dos juros começa **após o vencimento do título** e o
+            prazo para aplicação começa a contar
+
+            a partir deste prazo. Se o "dead_line" for 0, os juros começam a ser
+            cobrados no
+
+            dia seguinte ao vencimento do título.
+          examples:
+            - 10
+    originator_id:
+      type: string
+      readOnly: true
+      description: É o código do emitente.
+      examples:
+        - 304872
+    our_number:
+      type: string
+      readOnly: false
+      minLength: 1
+      maxLength: 10
+      pattern: ^\d{1,10}$
+      description: É o "nosso número", identificador único do título junto ao banco
+        para aquele emitente. Geralmente é gerado pelo próprio banco, mas pode
+        ser gerado pelo cliente em situações específicas.
+      examples:
+        - "3048"
+    payer:
+      type: object
+      description: É a parte responsável pelo pagamento do título, ou seja, o
+        destinatário do boleto. Este elemento reúne todas as informações do
+        cliente pagador.
+      required:
+        - name
+        - tax_id
+        - address
+      properties:
+        name:
+          type: string
+          maxLength: 40
+          pattern: ^(?!\s*$).+
+          description: É o nome/razão social da pessoa/empresa que deve realizar o
+            pagamento. (Nome no caso de PF e Razão Social no caso de PJ)
+          examples:
+            - José da Silva
+        tax_id:
+          type: string
+          minLength: 11
+          maxLength: 14
+          description: É o documento fiscal (CPF em caso de PF e CNPJ em caso de PJ/MEI)
+            do cliente pagador (devedor). Deve ser enviado sem máscara,
+            respeitando os zeros à esquerda.
+          examples:
+            - "12345678910"
+        email:
+          type: string
+          format: email
+          maxLength: 200
+          pattern: ^[a-z0-9.!#$&amp;'*+\/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$
+          description: Endereço de email do cliente pagador (devedor).
+          examples:
+            - pagador@email.com.br
+        address:
+          $ref: "#/components/schemas/address"
+    payments:
+      type: array
+      description: Lista de pagamentos do título
+      readOnly: true
+      items:
+        allOf:
+          - $ref: "#/components/schemas/payment"
+    payment:
+      type: object
+      description: Pagamento do título
+      properties:
+        date:
+          type: string
+          format: date
+          readOnly: true
+          description: Data de liquidação do título. É preenchida pelo C6 Bank quando o
+            boleto é pago.
+          examples:
+            - 2023-11-23
+        amount:
+          type: number
+          readOnly: true
+          description: Valor liquidado do título. É preenchido pelo C6 Bank quando o
+            boleto é pago.
+          examples:
+            - 123.45
+    payment_amount:
+      type: number
+      readOnly: true
+      description: Valor liquidado do título. É preenchido pelo C6 Bank quando o
+        boleto é pago.
+      examples:
+        - 123.45
+    payment_date:
+      type: string
+      format: date
+      readOnly: true
+      description: Data de liquidação do título. É preenchida pelo C6 Bank quando o
+        boleto é pago.
+      examples:
+        - 2023-11-23
+    status:
+      type: string
+      readOnly: true
+      enum:
+        - CREATED
+        - PAID
+        - CANCELLED
+      description: Define o status do boleto. Ao criar um boleto, enquanto ele não for
+        pago ou cancelado, seu status será "CREATED". Os status "PAID" e
+        "CANCELLED" são terminais (não podem ser alterados).
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
