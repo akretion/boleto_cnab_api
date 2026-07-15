@@ -2,7 +2,7 @@
 #
 # O Boleto-API é STATEFUL: como a conciliação do Sicoob é por polling agendado,
 # o serviço precisa das credenciais do tenant SEM um request na frente. Logo o
-# cofre vive aqui — não no Gestão-Contrato.
+# cofre vive aqui — não no sistema consumidor.
 #
 # Esta é a INTERFACE. A implementação real deve usar KMS/Vault ou criptografia
 # envelope no DB. NUNCA logar credencial/certificado. NUNCA versionar em git.

@@ -1,12 +1,12 @@
 # Boleto CNAB Client - Python
 
->  **Versão:** 1.5.0 | **Python:** 3.8+
+>  **Versão:** 1.4.1 (cliente pip) | **API:** 1.5.0 | **Python:** 3.8+
 
 Cliente Python oficial para a API de geração de Boletos Bancários Brasileiros.
 
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green)](../LICENSE)
-[![Version](https://img.shields.io/badge/version-1.5.0-green)](../VERSION)
+[![Version](https://img.shields.io/badge/version-1.4.1-green)](./boleto_cnab_client/__init__.py)
 
 ## 📋 Características
 
@@ -138,7 +138,7 @@ from boleto_cnab_client import BoletoClient, BoletoValidationError
 client = BoletoClient('http://localhost:9292')
 
 dados_bb = {
-    "cedente": "Imobiliária Teste LTDA",
+    "cedente": "Empresa Teste LTDA",
     "documento_cedente": "12345678000100",
     "sacado": "João da Silva",
     "sacado_documento": "12345678900",
@@ -468,7 +468,7 @@ Veja [docs/api/ofx-parsing.md](../docs/api/ofx-parsing.md) para detalhes do endp
 
 ---
 
-**Versão:** 1.5.0
+**Versão:** 1.4.1 (cliente) / API 1.5.0
 
 ### Novidades v1.3.0
 

@@ -13,7 +13,7 @@ RSpec.describe 'Render API', type: :integration do
   let(:boleto_data) do
     {
       'valor' => 100.0,
-      'cedente' => 'Imobiliaria X',
+      'cedente' => 'Empresa X',
       'documento_cedente' => '12345678000123',
       'sacado' => 'Fulano',
       'sacado_documento' => '12345678901',

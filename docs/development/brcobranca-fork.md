@@ -21,8 +21,7 @@ gem 'brcobranca', git: 'https://github.com/maxwbh/brcobranca.git'
 | **12.9.0** | 2026-06-12 | Remessa Sicoob CNAB400: setters normalizam `carteira` (`rjust 2`) e `convenio` (`rjust 9`), corrigindo as validações que falhavam quando o boleto gerava mas a remessa não |
 | **12.8.0** | 2026-05-28 | Novos campos PIX no boleto: `chave_pix`, `tipo_chave_pix`, `txid`. `dados_pix` expandido com `qrcode_disponivel` |
 | **12.7.1** | 2026-05-28 | Fix compatibilidade rghost 0.9.9 |
-| **12.7.0** | 2026-04-20 | Modulo `Brcobranca::Bancos` (registro centralizado de capacidades), carteiras por banco, extras (Sicoob cart 9/layout 810) |
-| **12.7.0** | 2026-04-08 | Suporte completo a **Banco C6 (336)** CNAB 400 (remessa + retorno + boleto) + PIX para 6 bancos |
+| **12.7.0** | 2026-04-08 / 2026-04-20 | Suporte completo a **Banco C6 (336)** CNAB 400 (remessa + retorno + boleto) + PIX para 6 bancos; módulo `Brcobranca::Bancos` (registro centralizado de capacidades), carteiras por banco, extras (Sicoob cart 9/layout 810) |
 | **12.6.0** | 2026-01-03 | Métodos de validação seguros (`valido?`, `to_hash_seguro`) — Fase 2 |
 | **12.5.0** | — | `Brcobranca::Retorno.parse` (factory com auto-detecção), `pagamento.to_hash` |
 | **12.4.0** | — | `Brcobranca::Remessa.criar` (factory), `remessa.to_hash` |
@@ -187,7 +186,7 @@ A partir de v12.6+, existe alternativa ao Ghostscript (rghost) usando **Prawn**:
 - Requer gems: `prawn`, `rqrcode`, `chunky_png`
 - Ideal para: containers minimalistas sem Ghostscript
 
-Atualmente o `boleto_cnab_api` usa **rghost** por compatibilidade, mas migração está em estudo.
+Desde a v1.4.0 o `boleto_cnab_api` usa **Prawn por padrão** (`BOLETO_TEMPLATE=prawn` na imagem principal, sem GhostScript); a variante com rghost fica em `Dockerfile.rghost`. O template `carne` (3 vias A4) também é Prawn.
 
 ## Mapeamento de Campos
 
@@ -231,15 +230,15 @@ Tamanho do `nosso_numero` conforme convênio:
 ```ruby
 convenio    # obrigatório
 carteira    # padrão: '1', também aceita '9' (contrato)
-variacao    # obrigatório (3 dígitos, ex: '019')
+variacao    # obrigatório (2 dígitos, ex: '01')
 modalidade  # padrão: '01'
 ```
 
 **Restrições:**
 - `aceite` deve ser `'N'`
 - `especie_documento` deve ser enviado (padrão: `'DM'`)
-- Novidade v12.6+: **Carteira 9** com número de contrato
-- Novidade v12.6+: **Layout 810** onde o cliente calcula próprio DV
+- Novidade v12.7.0: **Carteira 9** com número de contrato
+- Novidade v12.7.0: **Layout 810** onde o cliente calcula próprio DV
 
 #### Banco C6 (336) — NOVO em v12.7.0
 
@@ -253,7 +252,7 @@ carteira   # valores válidos: '10' ou '20'
 - CNAB 400 suportado (remessa + retorno)
 - CNAB 240 ainda **não** disponível
 - PIX híbrido suportado
-- Registro online via API oficial do C6: **ainda não integrado** (requer homologação no portal C6 Developers)
+- Registro online via API oficial do C6: **integrado no gateway Python** (`boleto-api-python`, provider `c6` — ver [c6-rest.md](./c6-rest.md)); aguarda homologação no portal C6 Developers (`C6_REGISTERED_READY`)
 
 #### Caixa (104)
 
@@ -351,5 +350,5 @@ Brcobranca::Boleto::Xxx.new(filtered_values)
 
 ---
 
-**Última atualização:** 2026-04-10
+**Última atualização:** 2026-06-17
 **Mantenedor:** Maxwell da Silva Oliveira ([@maxwbh](https://github.com/maxwbh)) — M&S do Brasil LTDA

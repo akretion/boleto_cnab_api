@@ -76,7 +76,7 @@ Adicione quaisquer links, referências ou mockups que ajudem a entender sua suge
 ## ✔️ Checklist
 
 - [ ] Verifiquei que não há feature request similar
-- [ ] Li a [documentação](../docs/) completa
+- [ ] Li a [documentação](../../docs/) completa
 - [ ] Esta funcionalidade está alinhada com os objetivos do projeto
 - [ ] Estou disposto a contribuir com a implementação (se souber como)
 

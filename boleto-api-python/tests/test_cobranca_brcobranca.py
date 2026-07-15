@@ -20,7 +20,7 @@ def test_brcobranca_proxy_registra_via_engine(client, cobranca_payload, monkeypa
     )
 
     body = {
-        "tenant_id": "imob1",
+        "tenant_id": "empresa1",
         "provider": "brcobranca",
         "account_config": {"bank": "itau", "agencia": "1234", "conta_corrente": "56789"},
         "cobranca": cobranca_payload,
@@ -45,7 +45,7 @@ def test_brcobranca_proxy_propaga_erro_do_engine(client, cobranca_payload, monke
         return_value=httpx.Response(400, text="dados invalidos")
     )
     body = {
-        "tenant_id": "imob1",
+        "tenant_id": "empresa1",
         "provider": "brcobranca",
         "account_config": {"bank": "itau"},
         "cobranca": cobranca_payload,

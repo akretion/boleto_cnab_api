@@ -22,6 +22,7 @@ def gerar_carne(body: CarneIn, vault: Vault = Depends(get_vault)) -> CarneOut:
     provider = build_provider(
         provider=body.provider, tenant_id=body.tenant_id,
         account_config=body.account_config, vault=vault,
+        credentials=body.credentials,
     )
 
     cobrancas = [provider.registrar(p) for p in body.parcelas]

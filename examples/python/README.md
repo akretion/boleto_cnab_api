@@ -34,7 +34,7 @@ bundle exec rackup -p 9292
 
 ```bash
 curl http://localhost:9292/api/health
-# Deve retornar: {"status":"OK"}
+# Deve retornar: {"status":"OK","timestamp":"..."}
 ```
 
 ## 🚀 Exemplos Disponíveis
@@ -383,5 +383,5 @@ MIT License - veja [LICENSE](../../LICENSE)
 
 ---
 
-**Última atualização:** 2026-04-10
+**Última atualização:** 2026-06-17
 **Versão:** 1.5.0

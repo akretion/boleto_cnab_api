@@ -41,18 +41,24 @@ class OAuthMtlsClient:
         scopes: list[str] | None = None,
         default_headers: dict[str, str] | None = None,
         timeout: float = 30.0,
+        static_token: str = "",
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.auth_url = auth_url
         self.client_id = client_id
         self.client_secret = client_secret
         self.scopes = scopes or []
+        # Sandbox de alguns bancos (ex.: Sicoob) usa token ESTÁTICO do portal,
+        # sem o fluxo OAuth: se informado, token() o devolve direto.
+        self.static_token = static_token
         self.default_headers = default_headers or {}
         self._ssl = self._build_ssl_context(pfx_base64, pfx_password)
         self._timeout = timeout
 
     # --- auth ---------------------------------------------------------------
     def token(self) -> str:
+        if self.static_token:
+            return self.static_token
         key = (self.client_id, self.base_url)
         cached = self._token_cache.get(key)
         if cached and cached["expires_at"] > time.time() + 30:
@@ -81,7 +87,13 @@ class OAuthMtlsClient:
         return access_token
 
     # --- request ------------------------------------------------------------
-    def request(self, method: str, path: str, json: Any = None) -> dict[str, Any]:
+    def request(
+        self,
+        method: str,
+        path: str,
+        json: Any = None,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         headers = {
             "Authorization": f"Bearer {self.token()}",
             "Content-Type": "application/json",
@@ -89,9 +101,14 @@ class OAuthMtlsClient:
         }
         url = f"{self.base_url}{path}"
         with httpx.Client(verify=self._ssl, timeout=self._timeout) as c:
-            r = c.request(method, url, json=json, headers=headers)
+            r = c.request(method, url, json=json, params=params, headers=headers)
             r.raise_for_status()
-            return r.json() if r.content else {}
+            if not r.content:
+                return {}
+            try:
+                return r.json()
+            except ValueError:  # 2xx com corpo não-JSON (ex.: mocks de sandbox)
+                return {"conteudo": r.text}
 
     # --- mTLS helper --------------------------------------------------------
     @staticmethod

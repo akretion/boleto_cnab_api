@@ -9,7 +9,7 @@
 | **Banco do Brasil** | 001 | ✅ | ✅ | ✅ | CNAB400 + CNAB240 | Todos os métodos disponíveis |
 | **Sicoob** | 756 | ✅ | ✅ | ✅ | CNAB240 | `linha_digitavel` pode ser `null` via `/data`; `variacao` **não** vai na remessa |
 | **Bradesco** | 237 | ✅ | ✅ | ✅ | CNAB400 | Requer `digito_conta` |
-| **Itaú** | 341 | ✅ | ✅ | ✅ | CNAB400 + CNAB444 | Suporta múltiplas carteiras |
+| **Itaú** | 341 | ✅ | ✅ | ✅ | CNAB400 | Suporta múltiplas carteiras |
 | **Caixa Econômica** | 104 | ✅ | ✅ | ✅ | CNAB240 | Convenio obrigatório |
 | **Santander** | 033 | ✅ | ✅ | ✅ | CNAB400 + CNAB240 | `nosso_numero` até 7 dígitos |
 | **Banco C6** | 336 | ✅ | ✅ | ✅ | CNAB400 | Carteira `'10'` ou `'20'`; remessa exige `codigo_beneficiario` |
@@ -176,7 +176,7 @@
   "conta_corrente": "9876543",
   "digito_conta": "2",
   "carteira": "102",          // 101, 102, 201, etc
-  "nosso_numero": "12345678901234567890"  // Até 20 dígitos
+  "nosso_numero": "12345678901234567890"  // Até 7 dígitos
 }
 ```
 
@@ -392,7 +392,7 @@ boleto.documento_numero  // ✅
 ## 🔗 Referências
 
 - [Documentação de Campos](./README.md)
-- [Exemplos Práticos](./examples.md)
+- [Exemplos Práticos](../../examples/python/README.md)
 - [Detalhes Técnicos](../development/brcobranca-fork.md)
 - [Gem BRCobranca](https://github.com/Maxwbh/brcobranca)
 

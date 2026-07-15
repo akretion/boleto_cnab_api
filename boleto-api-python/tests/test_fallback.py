@@ -32,7 +32,7 @@ def test_c6_nao_pronto_cai_no_brcobranca(client, cobranca_payload, monkeypatch):
     )
 
     body = {
-        "tenant_id": "imob_sem_credencial",
+        "tenant_id": "tenant_sem_credencial",
         "provider": "c6",
         "account_config": {},  # bank é injetado (banco_c6) pelo fallback
         "cobranca": cobranca_payload,
@@ -58,3 +58,23 @@ def test_sicoob_nao_pronto_cai_no_brcobranca(client, cobranca_payload, monkeypat
     assert r.status_code == 200, r.text
     assert r.json()["status"] == "registrado"
     assert b'"bank":"sicoob"' in route.calls.last.request.content.replace(b" ", b"")
+
+
+@respx.mock
+def test_provider_omitido_ou_vazio_vai_para_brcobranca(client, cobranca_payload, monkeypatch):
+    # Contrato: provider ausente/"" roteia para o método antigo (CNAB offline).
+    monkeypatch.setattr(brcobranca_proxy, "ENGINE_URL", "http://engine.test")
+    respx.post("http://engine.test/api/render/boleto").mock(
+        return_value=httpx.Response(200, json={"nosso_numero": "7", "linha_digitavel": "x", "codigo_barras": "y"})
+    )
+
+    sem_provider = {
+        "tenant_id": "t", "account_config": {"bank": "banco_c6"}, "cobranca": cobranca_payload,
+    }
+    r = client.post("/cobranca", json=sem_provider)
+    assert r.status_code == 200, r.text
+    assert r.json()["id"] == "7"
+
+    vazio = {**sem_provider, "provider": ""}
+    r = client.post("/cobranca", json=vazio)
+    assert r.status_code == 200, r.text

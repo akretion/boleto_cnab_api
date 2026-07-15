@@ -82,6 +82,6 @@ Adicione qualquer outro contexto sobre o problema aqui.
 
 - [ ] Verifiquei que não há issue similar aberta
 - [ ] Testei com a versão mais recente
-- [ ] Li a [documentação](../docs/)
+- [ ] Li a [documentação](../../docs/)
 - [ ] Incluí logs de erro
 - [ ] Incluí dados para reproduzir o problema

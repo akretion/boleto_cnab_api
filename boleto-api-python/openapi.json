@@ -2,26 +2,149 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Boleto-API (Python)",
-    "description": "Gateway de cobrança multi-banco (C6/Sicoob) + proxy ao engine brcobrança (Ruby).\n\n**Produto standalone** consumido por múltiplos sistemas; escopo por `tenant_id`.\n\n**Push de eventos (saída, não é um path desta API):** ao receber o webhook do banco, o gateway envia o evento normalizado (`WebhookEvent`) por `POST` ao consumidor dono do tenant, assinado em `X-Signature: sha256=<hmac_sha256(secret, raw_body)>`. Destino por tenant via `SUB__<tenant>__URL/SECRET`, com fallback global `EVENT_WEBHOOK_URL/SECRET`.",
-    "version": "0.1.0"
+    "description": "Gateway de cobrança multi-banco (C6/Sicoob) + proxy ao engine brcobrança (Ruby).\n\n**Produto standalone** consumido por múltiplos sistemas; escopo por `tenant_id`.\n\n**Push de eventos (saída, não é um path desta API):** ao receber o webhook do banco, o gateway envia o evento normalizado (`WebhookEvent`) por `POST` ao consumidor dono do tenant, assinado em `X-Signature: sha256=<hmac_sha256(secret, raw_body)>`. Destino por tenant via `SUB__<tenant>__URL/SECRET`, com fallback global `EVENT_WEBHOOK_URL/SECRET`.\n\n**Respostas `dict` (passthrough):** rotas Pix/Pix Automático/extrato/conciliação devolvem o corpo do banco como veio (padrão BACEN/documentação do banco), sem re-tipagem — o contrato é o do banco; o gateway normaliza autenticação, multi-tenant e erros.",
+    "version": "0.6.0"
   },
   "paths": {
+    "/bancos": {
+      "get": {
+        "tags": [
+          "bancos"
+        ],
+        "summary": "Listar",
+        "description": "Bancos/providers disponíveis, capacidades reais e como autenticar.",
+        "operationId": "listar_bancos_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Listar Bancos Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/credenciais": {
+      "post": {
+        "tags": [
+          "credenciais"
+        ],
+        "summary": "Cadastrar",
+        "description": "Armazena as credenciais cifradas (chave derivada do token) e devolve o token.\n\nO token é exibido UMA única vez — o servidor não consegue recuperá-lo nem\ndecifrar as credenciais sem ele. Use-o nas demais rotas via\n`Authorization: Bearer bapi_...`.",
+        "operationId": "cadastrar_credenciais_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredencialIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredencialOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "credenciais"
+        ],
+        "summary": "Revogar",
+        "description": "Revoga o token imediatamente (apaga o registro cifrado).",
+        "operationId": "revogar_credenciais_delete",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Bearer bapi_...",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_..."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/cobranca": {
       "post": {
         "tags": [
           "cobranca"
         ],
         "summary": "Registrar",
+        "description": "Registra a cobrança (boleto): `provider=c6|sicoob` = API REST do banco;\nvazio/omitido = CNAB offline (engine Ruby). Resposta normalizada.",
         "operationId": "registrar_cobranca_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CobrancaIn"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -53,6 +176,7 @@
           "cobranca"
         ],
         "summary": "Consultar",
+        "description": "Consulta o status normalizado do boleto (registrado|pendente|liquidado|baixado).",
         "operationId": "consultar_cobranca__cobranca_id__get",
         "parameters": [
           {
@@ -80,8 +204,150 @@
             "schema": {
               "$ref": "#/components/schemas/Provider"
             }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
           }
         ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CobrancaOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "cobranca"
+        ],
+        "summary": "Alterar",
+        "description": "Altera boleto emitido (amount, due_date, discount, interest, fine).",
+        "operationId": "alterar_cobranca__cobranca_id__put",
+        "parameters": [
+          {
+            "name": "cobranca_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cobranca Id"
+            }
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Provider"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Campos"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -110,6 +376,7 @@
           "cobranca"
         ],
         "summary": "Baixar",
+        "description": "Baixa/cancela o boleto (409 enquanto a CIP processa o registro).",
         "operationId": "baixar_cobranca__cobranca_id__delete",
         "parameters": [
           {
@@ -137,6 +404,138 @@
             "schema": {
               "$ref": "#/components/schemas/Provider"
             }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CobrancaOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cobranca/{cobranca_id}/pdf": {
+      "get": {
+        "tags": [
+          "cobranca"
+        ],
+        "summary": "Pdf",
+        "description": "PDF do boleto registrado (quando o banco fornece; C6 devolve base64).",
+        "operationId": "pdf_cobranca__cobranca_id__pdf_get",
+        "parameters": [
+          {
+            "name": "cobranca_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cobranca Id"
+            }
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Provider"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
           }
         ],
         "responses": {
@@ -188,6 +587,3915 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CarneOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pix": {
+      "post": {
+        "tags": [
+          "pix"
+        ],
+        "summary": "Criar",
+        "description": "Cria cobrança Pix: cob imediata (default) ou cobv se `data_vencimento`.",
+        "operationId": "criar_pix_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PixCobrancaIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PixCobrancaOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "pix"
+        ],
+        "summary": "Listar",
+        "description": "Lista cobranças do período (RFC3339). `vencimento=true` lista cobv.",
+        "operationId": "listar_pix_get",
+        "parameters": [
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "inicio",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Inicio"
+            }
+          },
+          {
+            "name": "fim",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Fim"
+            }
+          },
+          {
+            "name": "vencimento",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Vencimento"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Listar Pix Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pix/recebidos": {
+      "get": {
+        "tags": [
+          "pix"
+        ],
+        "summary": "Listar Recebidos",
+        "description": "Pix RECEBIDOS (money-in) no período — conciliação Pix (P_05 BACEN).",
+        "operationId": "listar_recebidos_pix_recebidos_get",
+        "parameters": [
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "inicio",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Inicio"
+            }
+          },
+          {
+            "name": "fim",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Fim"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Listar Recebidos Pix Recebidos Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pix/recebidos/{e2eid}": {
+      "get": {
+        "tags": [
+          "pix"
+        ],
+        "summary": "Consultar Recebido",
+        "description": "Detalhe de um Pix RECEBIDO pelo e2eid (conciliação money-in).",
+        "operationId": "consultar_recebido_pix_recebidos__e2eid__get",
+        "parameters": [
+          {
+            "name": "e2eid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "E2Eid"
+            }
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Consultar Recebido Pix Recebidos  E2Eid  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pix/recebidos/{e2eid}/devolucao/{devolucao_id}": {
+      "put": {
+        "tags": [
+          "pix"
+        ],
+        "summary": "Devolver",
+        "description": "Devolução (total/parcial) de um Pix recebido: corpo {\"valor\": \"10.00\"}.",
+        "operationId": "devolver_pix_recebidos__e2eid__devolucao__devolucao_id__put",
+        "parameters": [
+          {
+            "name": "e2eid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "E2Eid"
+            }
+          },
+          {
+            "name": "devolucao_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Devolucao Id"
+            }
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Devolver Pix Recebidos  E2Eid  Devolucao  Devolucao Id  Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "pix"
+        ],
+        "summary": "Consultar Devolucao",
+        "description": "Consulta uma devolução de Pix recebido.",
+        "operationId": "consultar_devolucao_pix_recebidos__e2eid__devolucao__devolucao_id__get",
+        "parameters": [
+          {
+            "name": "e2eid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "E2Eid"
+            }
+          },
+          {
+            "name": "devolucao_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Devolucao Id"
+            }
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Consultar Devolucao Pix Recebidos  E2Eid  Devolucao  Devolucao Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pix/lotes": {
+      "get": {
+        "tags": [
+          "pix"
+        ],
+        "summary": "Listar Lotes",
+        "description": "Lista lotes de cobv do período (RFC3339).",
+        "operationId": "listar_lotes_pix_lotes_get",
+        "parameters": [
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "inicio",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Inicio"
+            }
+          },
+          {
+            "name": "fim",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Fim"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Listar Lotes Pix Lotes Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pix/lote/{lote_id}": {
+      "put": {
+        "tags": [
+          "pix"
+        ],
+        "summary": "Criar Lote",
+        "description": "Cria/atualiza lote de cobranças com vencimento (lotecobv BACEN).",
+        "operationId": "criar_lote_pix_lote__lote_id__put",
+        "parameters": [
+          {
+            "name": "lote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Lote Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoteCobvIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Criar Lote Pix Lote  Lote Id  Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "pix"
+        ],
+        "summary": "Consultar Lote",
+        "description": "Consulta um lote de cobv pelo id.",
+        "operationId": "consultar_lote_pix_lote__lote_id__get",
+        "parameters": [
+          {
+            "name": "lote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Lote Id"
+            }
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Consultar Lote Pix Lote  Lote Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pix/{txid}": {
+      "get": {
+        "tags": [
+          "pix"
+        ],
+        "summary": "Consultar",
+        "description": "`vencimento=true` consulta cobv (/cobv/{txid}); default cob.",
+        "operationId": "consultar_pix__txid__get",
+        "parameters": [
+          {
+            "name": "txid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Txid"
+            }
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "vencimento",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Vencimento"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PixCobrancaOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "pix"
+        ],
+        "summary": "Revisar",
+        "description": "Revisa a cobrança (PATCH BACEN): valor, solicitacaoPagador, calendario...",
+        "operationId": "revisar_pix__txid__patch",
+        "parameters": [
+          {
+            "name": "txid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Txid"
+            }
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "vencimento",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Vencimento"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Campos"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PixCobrancaOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bolepix": {
+      "post": {
+        "tags": [
+          "bolepix"
+        ],
+        "summary": "Criar",
+        "description": "Emite Bolepix (boleto + QR Pix EVP). Reenvio com o mesmo\nexternal_reference_id devolve a cobrança existente (idempotente no banco).",
+        "operationId": "criar_bolepix_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BolepixIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CobrancaOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bolepix/{external_reference_id}": {
+      "get": {
+        "tags": [
+          "bolepix"
+        ],
+        "summary": "Consultar",
+        "description": "Consulta o Bolepix pelo external_reference_id (26 chars A-Z0-9).",
+        "operationId": "consultar_bolepix__external_reference_id__get",
+        "parameters": [
+          {
+            "name": "external_reference_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "External Reference Id"
+            }
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON base64) — só memória.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON base64) — só memória."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CobrancaOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "bolepix"
+        ],
+        "summary": "Cancelar",
+        "description": "Cancela o Bolepix (409 enquanto a CIP processa o registro).",
+        "operationId": "cancelar_bolepix__external_reference_id__delete",
+        "parameters": [
+          {
+            "name": "external_reference_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "External Reference Id"
+            }
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON base64) — só memória.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON base64) — só memória."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CobrancaOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bolepix/{external_reference_id}/pdf": {
+      "get": {
+        "tags": [
+          "bolepix"
+        ],
+        "summary": "Pdf",
+        "description": "PDF do Bolepix em base64.",
+        "operationId": "pdf_bolepix__external_reference_id__pdf_get",
+        "parameters": [
+          {
+            "name": "external_reference_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "External Reference Id"
+            }
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON base64) — só memória.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON base64) — só memória."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CobrancaOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conciliacao/recebiveis": {
+      "get": {
+        "tags": [
+          "conciliacao"
+        ],
+        "summary": "Recebiveis",
+        "description": "Recebíveis C6 Pay do período (paginado; máx. 60 dias por consulta).",
+        "operationId": "recebiveis_conciliacao_recebiveis_get",
+        "parameters": [
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Data inicial (YYYY-MM-DD)",
+              "title": "Start Date"
+            },
+            "description": "Data inicial (YYYY-MM-DD)"
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Data final (YYYY-MM-DD, máx. 60 dias após start)",
+              "title": "End Date"
+            },
+            "description": "Data final (YYYY-MM-DD, máx. 60 dias após start)"
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "default": 50,
+              "title": "Size"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConciliacaoOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conciliacao/transacoes": {
+      "get": {
+        "tags": [
+          "conciliacao"
+        ],
+        "summary": "Transacoes",
+        "description": "Transações C6 Pay do período (paginado; máx. 60 dias por consulta).",
+        "operationId": "transacoes_conciliacao_transacoes_get",
+        "parameters": [
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Data inicial (YYYY-MM-DD)",
+              "title": "Start Date"
+            },
+            "description": "Data inicial (YYYY-MM-DD)"
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Data final (YYYY-MM-DD, máx. 60 dias após start)",
+              "title": "End Date"
+            },
+            "description": "Data final (YYYY-MM-DD, máx. 60 dias após start)"
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "default": 50,
+              "title": "Size"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON em base64) — só memória, nunca persistidas. Fallback: cofre VAULT__*."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConciliacaoOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/extrato": {
+      "get": {
+        "tags": [
+          "extrato"
+        ],
+        "summary": "Consultar",
+        "description": "Extrato de movimentações da conta (exclusivo PJ no C6).",
+        "operationId": "consultar_extrato_get",
+        "parameters": [
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Data inicial (YYYY-MM-DD)",
+              "title": "Start Date"
+            },
+            "description": "Data inicial (YYYY-MM-DD)"
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Data final (YYYY-MM-DD)",
+              "title": "End Date"
+            },
+            "description": "Data final (YYYY-MM-DD)"
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON base64) — só memória.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON base64) — só memória."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Consultar Extrato Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pix-automatico/recorrencias": {
+      "post": {
+        "tags": [
+          "pix-automatico"
+        ],
+        "summary": "Criar Recorrencia",
+        "description": "Cria a recorrência (rec). O pagador autoriza via app (solicrec) ou QR (loc).",
+        "operationId": "criar_recorrencia_pix_automatico_recorrencias_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecorrenciaIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Criar Recorrencia Pix Automatico Recorrencias Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "pix-automatico"
+        ],
+        "summary": "Listar Recorrencias",
+        "description": "Lista recorrências do período (RFC3339).",
+        "operationId": "listar_recorrencias_pix_automatico_recorrencias_get",
+        "parameters": [
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "inicio",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Inicio"
+            }
+          },
+          {
+            "name": "fim",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Fim"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON base64) — só memória.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON base64) — só memória."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Listar Recorrencias Pix Automatico Recorrencias Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pix-automatico/recorrencias/{id_rec}": {
+      "get": {
+        "tags": [
+          "pix-automatico"
+        ],
+        "summary": "Consultar Recorrencia",
+        "description": "Consulta a recorrência (opcionalmente por txid da jornada).",
+        "operationId": "consultar_recorrencia_pix_automatico_recorrencias__id_rec__get",
+        "parameters": [
+          {
+            "name": "id_rec",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id Rec"
+            }
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "txid",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Txid"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON base64) — só memória.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON base64) — só memória."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Consultar Recorrencia Pix Automatico Recorrencias  Id Rec  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "pix-automatico"
+        ],
+        "summary": "Revisar Recorrencia",
+        "description": "Gestão (Jornada 4): alteração ou cancelamento (ex.: {\"status\": \"CANCELADA\"}).",
+        "operationId": "revisar_recorrencia_pix_automatico_recorrencias__id_rec__patch",
+        "parameters": [
+          {
+            "name": "id_rec",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id Rec"
+            }
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON base64) — só memória.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON base64) — só memória."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Campos"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Revisar Recorrencia Pix Automatico Recorrencias  Id Rec  Patch"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pix-automatico/solicitacoes": {
+      "post": {
+        "tags": [
+          "pix-automatico"
+        ],
+        "summary": "Criar Solicitacao",
+        "description": "solicrec: envia o pedido de autorização ao app do banco do pagador (Jornada 1).",
+        "operationId": "criar_solicitacao_pix_automatico_solicitacoes_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SolicitacaoRecorrenciaIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Criar Solicitacao Pix Automatico Solicitacoes Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pix-automatico/solicitacoes/{id_solic}": {
+      "get": {
+        "tags": [
+          "pix-automatico"
+        ],
+        "summary": "Consultar Solicitacao",
+        "description": "Consulta a solicitação de autorização.",
+        "operationId": "consultar_solicitacao_pix_automatico_solicitacoes__id_solic__get",
+        "parameters": [
+          {
+            "name": "id_solic",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id Solic"
+            }
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON base64) — só memória.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON base64) — só memória."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Consultar Solicitacao Pix Automatico Solicitacoes  Id Solic  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "pix-automatico"
+        ],
+        "summary": "Revisar Solicitacao",
+        "description": "Revisa/cancela a solicitação de autorização (PATCH BACEN).",
+        "operationId": "revisar_solicitacao_pix_automatico_solicitacoes__id_solic__patch",
+        "parameters": [
+          {
+            "name": "id_solic",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id Solic"
+            }
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON base64) — só memória.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON base64) — só memória."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Campos"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Revisar Solicitacao Pix Automatico Solicitacoes  Id Solic  Patch"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pix-automatico/locations": {
+      "post": {
+        "tags": [
+          "pix-automatico"
+        ],
+        "summary": "Criar Location",
+        "description": "Cria a location do QR de adesão da recorrência (Jornada 2).",
+        "operationId": "criar_location_pix_automatico_locations_post",
+        "parameters": [
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON base64) — só memória.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON base64) — só memória."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Criar Location Pix Automatico Locations Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pix-automatico/locations/{loc_id}": {
+      "get": {
+        "tags": [
+          "pix-automatico"
+        ],
+        "summary": "Consultar Location",
+        "description": "Consulta a location (payload do QR).",
+        "operationId": "consultar_location_pix_automatico_locations__loc_id__get",
+        "parameters": [
+          {
+            "name": "loc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Loc Id"
+            }
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON base64) — só memória.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON base64) — só memória."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Consultar Location Pix Automatico Locations  Loc Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pix-automatico/locations/{loc_id}/recorrencia": {
+      "delete": {
+        "tags": [
+          "pix-automatico"
+        ],
+        "summary": "Desvincular Location",
+        "description": "Desvincula a recorrência da location (invalida o QR).",
+        "operationId": "desvincular_location_pix_automatico_locations__loc_id__recorrencia_delete",
+        "parameters": [
+          {
+            "name": "loc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Loc Id"
+            }
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON base64) — só memória.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON base64) — só memória."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Desvincular Location Pix Automatico Locations  Loc Id  Recorrencia Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pix-automatico/cobrancas/{txid}": {
+      "put": {
+        "tags": [
+          "pix-automatico"
+        ],
+        "summary": "Criar Cobranca",
+        "description": "Agenda a cobrança do ciclo (>= 2 dias antes do vencimento — regra BACEN).",
+        "operationId": "criar_cobranca_pix_automatico_cobrancas__txid__put",
+        "parameters": [
+          {
+            "name": "txid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Txid"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CobrancaRecorrenteIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Criar Cobranca Pix Automatico Cobrancas  Txid  Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "pix-automatico"
+        ],
+        "summary": "Consultar Cobranca",
+        "description": "Consulta uma cobrança do ciclo (cobr) pelo txid.",
+        "operationId": "consultar_cobranca_pix_automatico_cobrancas__txid__get",
+        "parameters": [
+          {
+            "name": "txid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Txid"
+            }
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON base64) — só memória.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON base64) — só memória."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Consultar Cobranca Pix Automatico Cobrancas  Txid  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "pix-automatico"
+        ],
+        "summary": "Revisar Cobranca",
+        "description": "Revisa a cobrança do ciclo (PATCH BACEN) — ex.: cancelamento antes da liquidação.",
+        "operationId": "revisar_cobranca_pix_automatico_cobrancas__txid__patch",
+        "parameters": [
+          {
+            "name": "txid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Txid"
+            }
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON base64) — só memória.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON base64) — só memória."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Campos"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Revisar Cobranca Pix Automatico Cobrancas  Txid  Patch"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pix-automatico/cobrancas": {
+      "get": {
+        "tags": [
+          "pix-automatico"
+        ],
+        "summary": "Listar Cobrancas",
+        "description": "Lista cobranças do ciclo no período (RFC3339).",
+        "operationId": "listar_cobrancas_pix_automatico_cobrancas_get",
+        "parameters": [
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "inicio",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Inicio"
+            }
+          },
+          {
+            "name": "fim",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Fim"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON base64) — só memória.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON base64) — só memória."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Listar Cobrancas Pix Automatico Cobrancas Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pix-automatico/cobrancas/{txid}/retentativa/{data}": {
+      "post": {
+        "tags": [
+          "pix-automatico"
+        ],
+        "summary": "Retentar Cobranca",
+        "description": "Retentativa de liquidação para a data (YYYY-MM-DD) — pós vencimento não pago.",
+        "operationId": "retentar_cobranca_pix_automatico_cobrancas__txid__retentativa__data__post",
+        "parameters": [
+          {
+            "name": "txid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Txid"
+            }
+          },
+          {
+            "name": "data",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Data"
+            }
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON base64) — só memória.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON base64) — só memória."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Retentar Cobranca Pix Automatico Cobrancas  Txid  Retentativa  Data  Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pix-automatico/config/webhooks": {
+      "put": {
+        "tags": [
+          "pix-automatico"
+        ],
+        "summary": "Configurar Webhooks",
+        "description": "Configura webhookrec e/ou webhookcobr: {\"url_recorrencia\": ..., \"url_cobranca\": ...}.",
+        "operationId": "configurar_webhooks_pix_automatico_config_webhooks_put",
+        "parameters": [
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON base64) — só memória.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON base64) — só memória."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Configurar Webhooks Pix Automatico Config Webhooks Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/config/webhook-banco": {
+      "post": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Cadastrar",
+        "description": "Registra a URL de notificação no banco (service: BANK_SLIP | CHECKOUT).",
+        "operationId": "cadastrar_config_webhook_banco_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookBancoIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Cadastrar Config Webhook Banco Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Consultar",
+        "description": "Consulta o webhook cadastrado no banco para o service.",
+        "operationId": "consultar_config_webhook_banco_get",
+        "parameters": [
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "service",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "BANK_SLIP",
+              "title": "Service"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON base64) — só memória.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON base64) — só memória."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Consultar Config Webhook Banco Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Remover",
+        "description": "Remove o webhook do service no banco.",
+        "operationId": "remover_config_webhook_banco_delete",
+        "parameters": [
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "service",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "BANK_SLIP",
+              "title": "Service"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON base64) — só memória.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON base64) — só memória."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Remover Config Webhook Banco Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/config/webhook-pix": {
+      "put": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Configurar Pix",
+        "description": "Configura o webhook BACEN da chave: {tenant_id, provider?, chave, url, credentials?}.",
+        "operationId": "configurar_pix_config_webhook_pix_put",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Configurar Pix Config Webhook Pix Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Consultar Pix",
+        "description": "Consulta o webhook BACEN cadastrado para a chave Pix.",
+        "operationId": "consultar_pix_config_webhook_pix_get",
+        "parameters": [
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "chave",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Chave"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON base64) — só memória.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON base64) — só memória."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Consultar Pix Config Webhook Pix Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Remover Pix",
+        "description": "Remove o webhook BACEN da chave Pix.",
+        "operationId": "remover_pix_config_webhook_pix_delete",
+        "parameters": [
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "chave",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Chave"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Provider",
+              "default": "c6"
+            }
+          },
+          {
+            "name": "X-Bank-Credentials",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Credenciais do banco (JSON base64) — só memória.",
+              "title": "X-Bank-Credentials"
+            },
+            "description": "Credenciais do banco (JSON base64) — só memória."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer bapi_... (token do /credenciais)",
+              "title": "Authorization"
+            },
+            "description": "Bearer bapi_... (token do /credenciais)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Remover Pix Config Webhook Pix Delete"
                 }
               }
             }
@@ -306,6 +4614,7 @@
           "health"
         ],
         "summary": "Health",
+        "description": "Sonda de disponibilidade do gateway (não toca nos bancos).",
         "operationId": "health_health_get",
         "responses": {
           "200": {
@@ -328,6 +4637,147 @@
   },
   "components": {
     "schemas": {
+      "BolepixCobranca": {
+        "properties": {
+          "valor": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Valor",
+            "description": "Valor da cobrança",
+            "examples": [
+              "99.90"
+            ]
+          },
+          "vencimento": {
+            "type": "string",
+            "format": "date",
+            "title": "Vencimento"
+          },
+          "descricao": {
+            "type": "string",
+            "title": "Descricao",
+            "description": "Descrição da cobrança (obrigatória no Bolepix)"
+          },
+          "pagador": {
+            "$ref": "#/components/schemas/Pagador",
+            "description": "endereco: {address|logradouro+numero, neighborhood|bairro, city, state, zip_code}"
+          },
+          "external_reference_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Reference Id",
+            "description": "^[A-Z0-9]{26}$ — gerado automaticamente se omitido"
+          },
+          "chave_pix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chave Pix",
+            "description": "Chave EVP; default: account_config.chave_pix"
+          },
+          "nosso_numero": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nosso Numero"
+          },
+          "instrucoes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instrucoes"
+          },
+          "dias_apos_vencimento": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dias Apos Vencimento",
+            "description": "days_after_due_date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "valor",
+          "vencimento",
+          "descricao",
+          "pagador"
+        ],
+        "title": "BolepixCobranca"
+      },
+      "BolepixIn": {
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/Provider",
+            "default": "c6"
+          },
+          "account_config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Account Config"
+          },
+          "bolepix": {
+            "$ref": "#/components/schemas/BolepixCobranca"
+          },
+          "credentials": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credentials"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tenant_id",
+          "bolepix"
+        ],
+        "title": "BolepixIn"
+      },
       "CarneIn": {
         "properties": {
           "tenant_id": {
@@ -335,7 +4785,7 @@
             "title": "Tenant Id",
             "description": "Identificador do tenant",
             "examples": [
-              "imob_123"
+              "empresa_123"
             ]
           },
           "provider": {
@@ -362,6 +4812,19 @@
             "type": "array",
             "title": "Parcelas",
             "description": "Parcelas do carnê (registradas individualmente)"
+          },
+          "credentials": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credentials",
+            "description": "Credenciais do banco no request (só memória; fallback: cofre VAULT__*)."
           }
         },
         "type": "object",
@@ -508,11 +4971,13 @@
             "title": "Tenant Id",
             "description": "Identificador do tenant (resolve credenciais no cofre)",
             "examples": [
-              "imob_123"
+              "empresa_123"
             ]
           },
           "provider": {
-            "$ref": "#/components/schemas/Provider"
+            "$ref": "#/components/schemas/Provider",
+            "description": "Roteamento: `c6` = API REST do banco; vazio/omitido = brcobrança (CNAB offline).",
+            "default": "brcobranca"
           },
           "account_config": {
             "additionalProperties": true,
@@ -522,12 +4987,24 @@
           },
           "cobranca": {
             "$ref": "#/components/schemas/Cobranca"
+          },
+          "credentials": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credentials",
+            "description": "Credenciais do banco enviadas NO REQUEST (client_id, client_secret, pfx_base64, pfx_password). Usadas só em memória, nunca persistidas. Se omitidas, caem no cofre do servidor (VAULT__*)."
           }
         },
         "type": "object",
         "required": [
           "tenant_id",
-          "provider",
           "cobranca"
         ],
         "title": "CobrancaIn"
@@ -616,6 +5093,202 @@
         "title": "CobrancaOut",
         "description": "Resposta normalizada — mesmo shape para qualquer provider."
       },
+      "CobrancaRecorrente": {
+        "properties": {
+          "id_rec": {
+            "type": "string",
+            "title": "Id Rec",
+            "description": "idRec da recorrência aprovada"
+          },
+          "valor": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Valor"
+          },
+          "data_vencimento": {
+            "type": "string",
+            "format": "date",
+            "title": "Data Vencimento"
+          },
+          "info_adicional": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Info Adicional"
+          },
+          "extras": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extras"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id_rec",
+          "valor",
+          "data_vencimento"
+        ],
+        "title": "CobrancaRecorrente",
+        "description": "Uma cobrança do ciclo (cobr) — agendar >= 2 dias antes do vencimento.\nO agendamento é responsabilidade do produto consumidor (gateway stateless)."
+      },
+      "CobrancaRecorrenteIn": {
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/Provider",
+            "default": "c6"
+          },
+          "account_config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Account Config"
+          },
+          "cobranca": {
+            "$ref": "#/components/schemas/CobrancaRecorrente"
+          },
+          "credentials": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credentials"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tenant_id",
+          "cobranca"
+        ],
+        "title": "CobrancaRecorrenteIn"
+      },
+      "ConciliacaoOut": {
+        "properties": {
+          "page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page"
+          },
+          "last_page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Page"
+          },
+          "total_items": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Items"
+          },
+          "items": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "title": "ConciliacaoOut",
+        "description": "Página de recebíveis/transações — itens crus do banco + paginação."
+      },
+      "CredencialIn": {
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id",
+            "description": "Tenant dono destas credenciais",
+            "examples": [
+              "empresa_123"
+            ]
+          },
+          "provider": {
+            "$ref": "#/components/schemas/Provider",
+            "description": "Banco/provider destas credenciais (ex: c6)"
+          },
+          "credentials": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Credentials",
+            "description": "client_id, client_secret, pfx_base64, pfx_password (cifradas em repouso; chave derivada do token — o servidor não decifra sozinho)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tenant_id",
+          "provider",
+          "credentials"
+        ],
+        "title": "CredencialIn",
+        "description": "Cadastro de credenciais do banco — devolve um token opaco (única vez)."
+      },
+      "CredencialOut": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token",
+            "description": "Token opaco (bapi_...) — exibido UMA única vez; guarde-o. Use nas demais rotas via Authorization: Bearer"
+          },
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/Provider"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "tenant_id",
+          "provider"
+        ],
+        "title": "CredencialOut"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -628,6 +5301,54 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "LoteCobvIn": {
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/Provider",
+            "default": "c6"
+          },
+          "account_config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Account Config"
+          },
+          "descricao": {
+            "type": "string",
+            "title": "Descricao"
+          },
+          "cobrancas": {
+            "items": {
+              "$ref": "#/components/schemas/PixCobranca"
+            },
+            "type": "array",
+            "title": "Cobrancas",
+            "description": "Cada item exige txid e data_vencimento"
+          },
+          "credentials": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credentials"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tenant_id",
+          "descricao",
+          "cobrancas"
+        ],
+        "title": "LoteCobvIn"
       },
       "Pagador": {
         "properties": {
@@ -668,6 +5389,221 @@
         ],
         "title": "Pagador"
       },
+      "PixCobranca": {
+        "properties": {
+          "valor": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Valor",
+            "description": "Valor original da cobrança",
+            "examples": [
+              "10.00"
+            ]
+          },
+          "chave": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chave",
+            "description": "Chave Pix do recebedor. Se omitida, usa `account_config.chave_pix`."
+          },
+          "txid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Txid",
+            "description": "Txid ([a-zA-Z0-9]{26,35}). Obrigatório na cobv; na cob o banco gera."
+          },
+          "expiracao_segundos": {
+            "type": "integer",
+            "title": "Expiracao Segundos",
+            "description": "Validade da cob imediata, em segundos (ignorado na cobv).",
+            "default": 3600
+          },
+          "data_vencimento": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Vencimento",
+            "description": "Se presente, emite cobv (cobrança com vencimento) em vez de cob imediata."
+          },
+          "validade_apos_vencimento": {
+            "type": "integer",
+            "title": "Validade Apos Vencimento",
+            "description": "Dias corridos em que a cobv ainda pode ser paga após o vencimento.",
+            "default": 30
+          },
+          "devedor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Pagador"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Devedor (obrigatório na cobv)"
+          },
+          "descricao": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Descricao",
+            "description": "solicitacaoPagador (texto ao pagador)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "valor"
+        ],
+        "title": "PixCobranca",
+        "description": "Cobrança Pix dinâmica (padrão BACEN: cob imediata ou cobv com vencimento)."
+      },
+      "PixCobrancaIn": {
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id",
+            "description": "Identificador do tenant",
+            "examples": [
+              "empresa_123"
+            ]
+          },
+          "provider": {
+            "$ref": "#/components/schemas/Provider",
+            "description": "Provider REST com Pix dinâmico (brcobrança não suporta).",
+            "default": "c6"
+          },
+          "account_config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Account Config",
+            "description": "Blob por provider. c6: {chave_pix, ...}"
+          },
+          "pix": {
+            "$ref": "#/components/schemas/PixCobranca"
+          },
+          "credentials": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credentials",
+            "description": "Credenciais do banco enviadas NO REQUEST (client_id, client_secret, pfx_base64, pfx_password). Só em memória; fallback: cofre VAULT__*."
+          }
+        },
+        "type": "object",
+        "required": [
+          "tenant_id",
+          "pix"
+        ],
+        "title": "PixCobrancaIn"
+      },
+      "PixCobrancaOut": {
+        "properties": {
+          "txid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Txid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "pix_copia_cola": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pix Copia Cola",
+            "description": "Payload EMV (copia-e-cola)"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location",
+            "description": "URL do payload (loc.location)"
+          },
+          "expira_em": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expira Em"
+          },
+          "raw": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "PixCobrancaOut",
+        "description": "Resposta normalizada da cobrança Pix."
+      },
       "Provider": {
         "type": "string",
         "enum": [
@@ -678,6 +5614,225 @@
         "title": "Provider",
         "description": "Provider de cobrança. `brcobranca` = offline/CNAB (engine Ruby)."
       },
+      "Recorrencia": {
+        "properties": {
+          "contrato": {
+            "type": "string",
+            "title": "Contrato",
+            "description": "Identificador do contrato no recebedor",
+            "examples": [
+              "CT-2026-001"
+            ]
+          },
+          "objeto": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objeto",
+            "description": "Descrição do objeto do contrato",
+            "examples": [
+              "Aluguel Apto 101"
+            ]
+          },
+          "devedor": {
+            "$ref": "#/components/schemas/Pagador"
+          },
+          "periodicidade": {
+            "type": "string",
+            "title": "Periodicidade",
+            "description": "SEMANAL | MENSAL | TRIMESTRAL | SEMESTRAL | ANUAL",
+            "examples": [
+              "MENSAL"
+            ]
+          },
+          "data_inicial": {
+            "type": "string",
+            "format": "date",
+            "title": "Data Inicial"
+          },
+          "data_final": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Final"
+          },
+          "valor_fixo": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valor Fixo",
+            "description": "valorRec — cobranças de valor fixo"
+          },
+          "valor_minimo": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valor Minimo",
+            "description": "valorMinimoRecebedor — valor variável"
+          },
+          "politica_retentativa": {
+            "type": "string",
+            "title": "Politica Retentativa",
+            "description": "NAO_PERMITE | PERMITE_3R_7D",
+            "default": "PERMITE_3R_7D"
+          },
+          "loc": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loc",
+            "description": "Id de locrec p/ adesão via QR (Jornada 2)"
+          },
+          "txid_ativacao": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Txid Ativacao",
+            "description": "ativacao.dadosJornada.txid (Jornadas 3/4)"
+          },
+          "extras": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extras",
+            "description": "Campos BACEN adicionais (merge no payload)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "contrato",
+          "devedor",
+          "periodicidade",
+          "data_inicial"
+        ],
+        "title": "Recorrencia",
+        "description": "Vínculo de recorrência (Pix Automático) — o 'contrato de cobrança'."
+      },
+      "RecorrenciaIn": {
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/Provider",
+            "default": "c6"
+          },
+          "account_config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Account Config"
+          },
+          "recorrencia": {
+            "$ref": "#/components/schemas/Recorrencia"
+          },
+          "credentials": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credentials"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tenant_id",
+          "recorrencia"
+        ],
+        "title": "RecorrenciaIn"
+      },
+      "SolicitacaoRecorrenciaIn": {
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/Provider",
+            "default": "c6"
+          },
+          "account_config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Account Config"
+          },
+          "dados": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Dados",
+            "description": "Payload BACEN da solicrec (idRec, ...)"
+          },
+          "credentials": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credentials"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tenant_id",
+          "dados"
+        ],
+        "title": "SolicitacaoRecorrenciaIn",
+        "description": "solicrec — pedido de autorização enviado ao app do pagador (Jornada 1)."
+      },
       "Status": {
         "type": "string",
         "enum": [
@@ -685,6 +5840,7 @@
           "pendente",
           "liquidado",
           "baixado",
+          "expirado",
           "erro"
         ],
         "title": "Status",
@@ -729,6 +5885,47 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WebhookBancoIn": {
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/Provider",
+            "default": "c6"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "description": "URL pública que o banco chamará (ex: https://.../webhooks/c6/{tenant})"
+          },
+          "service": {
+            "type": "string",
+            "title": "Service",
+            "description": "BANK_SLIP | CHECKOUT",
+            "default": "BANK_SLIP"
+          },
+          "credentials": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credentials"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tenant_id",
+          "url"
+        ],
+        "title": "WebhookBancoIn"
       },
       "WebhookEvent": {
         "properties": {
@@ -810,5 +6007,55 @@
         "description": "Evento normalizado de pagamento — também o corpo do push aos consumidores."
       }
     }
-  }
+  },
+  "tags": [
+    {
+      "name": "bancos",
+      "description": "Catálogo de bancos, capacidades reais (introspecção) e esquema de credenciais por banco."
+    },
+    {
+      "name": "credenciais",
+      "description": "Tokenização zero-knowledge: cadastre as credenciais do banco UMA vez e use o token `bapi_` nas demais chamadas."
+    },
+    {
+      "name": "cobranca",
+      "description": "Boleto: emitir, consultar, alterar, PDF e baixar — REST (banco) ou CNAB offline (engine Ruby), conforme `provider`."
+    },
+    {
+      "name": "carne",
+      "description": "Carnê 3-vias A4 (registra N parcelas e monta o PDF no engine)."
+    },
+    {
+      "name": "pix",
+      "description": "Pix BACEN: cob/cobv, revisão, listas, lote e Pix RECEBIDOS (conciliação). Dialeto idêntico em todos os bancos."
+    },
+    {
+      "name": "bolepix",
+      "description": "Boleto híbrido online com QR Pix EVP embutido (exclusivo C6, /v2/bank_slips)."
+    },
+    {
+      "name": "pix-automatico",
+      "description": "Débito recorrente via Pix (BACEN): recorrência, autorização do pagador, cobranças do ciclo e retentativa. O agendamento de cada cobrança fica no produto consumidor."
+    },
+    {
+      "name": "conciliacao",
+      "description": "Recebíveis e transações C6 Pay (extrato da adquirência)."
+    },
+    {
+      "name": "extrato",
+      "description": "Extrato da conta PJ (C6 /v1/statement; Sicoob conta-corrente v4 — mensal)."
+    },
+    {
+      "name": "config",
+      "description": "Configurações NO banco: URL de webhook (boleto e Pix por chave)."
+    },
+    {
+      "name": "webhooks",
+      "description": "ENTRADA de notificações dos bancos → evento normalizado → push assinado (HMAC) ao consumidor dono do tenant."
+    },
+    {
+      "name": "health",
+      "description": "Sonda de disponibilidade."
+    }
+  ]
 }

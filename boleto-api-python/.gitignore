@@ -4,3 +4,7 @@ __pycache__/
 .env
 *.pfx
 *.pem
+
+# Tokenizacao de credenciais (SQLite local) - NUNCA versionar
+credentials.db
+*.db
