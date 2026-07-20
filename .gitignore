@@ -113,3 +113,7 @@ CHANGELOG.md.bak
 # Node modules (se houver frontend)
 node_modules/
 coverage/
+
+# Assets de documentação (galeria de boletos no README) — versionar
+!docs/assets/
+!docs/assets/**/*.png

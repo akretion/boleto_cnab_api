@@ -38,6 +38,40 @@
 
 ---
 
+## 🖼️ Boletos gerados pela API
+
+Exemplos **reais gerados pela API** (engine BrCobrança, template Prawn — sem GhostScript), um por banco:
+
+<p align="center">
+  <img src="./docs/assets/boletos/banco_brasil.png" width="24%" alt="Boleto Banco do Brasil" />
+  <img src="./docs/assets/boletos/itau.png" width="24%" alt="Boleto Itaú" />
+  <img src="./docs/assets/boletos/santander.png" width="24%" alt="Boleto Santander" />
+  <img src="./docs/assets/boletos/caixa.png" width="24%" alt="Boleto Caixa" />
+</p>
+<p align="center">
+  <img src="./docs/assets/boletos/banco_c6.png" width="24%" alt="Boleto C6 Bank" />
+  <img src="./docs/assets/boletos/sicoob.png" width="24%" alt="Boleto Sicoob" />
+  <img src="./docs/assets/boletos/bolepix.png" width="24%" alt="Boleto híbrido com Pix (Bolepix)" />
+  <img src="./docs/assets/boletos/carne.png" width="24%" alt="Carnê 3-vias" />
+</p>
+
+<p align="center">
+  <sub>
+    <strong>Banco do Brasil</strong> · <strong>Itaú</strong> · <strong>Santander</strong> · <strong>Caixa</strong> ·
+    <strong>C6 Bank</strong> · <strong>Sicoob</strong> ·
+    <strong>Bolepix</strong> (boleto híbrido com QR Pix) · <strong>Carnê</strong> (3 vias A4)
+    &nbsp;— e mais 12 bancos.
+  </sub>
+</p>
+
+> 💡 Todos acima saíram de uma chamada `GET /api/boleto?bank=<banco>&type=pdf&data=<json>` na
+> [demo ao vivo](https://boleto-cnab-api.onrender.com/api/docs). Além do CNAB offline (18 bancos),
+> o projeto tem um **gateway REST** que integra as APIs online do **C6 Bank** e do **Sicoob**
+> (boleto registrado, Pix, Pix Automático, conciliação) — veja
+> [`boleto-api-python/`](./boleto-api-python/README.md).
+
+---
+
 ## Por que usar?
 
 Se você precisa **gerar boletos**, **processar arquivos CNAB** ou **conciliar pagamentos via OFX** no Brasil, esta API resolve tudo via HTTP — sem precisar instalar gems Ruby no seu sistema.
