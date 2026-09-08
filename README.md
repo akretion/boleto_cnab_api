@@ -25,7 +25,7 @@ GET /boleto/nosso_numero
         requires :data, type: String, desc: 'Boleto data as a stringified json'
 
 # Imprimir um Boleto apenas:
-GET /boleto/get
+GET /boleto?type=pdf&bank=itau&data=<stringified json>
         requires :bank, type: String, desc: 'Bank'
         requires :type, type: String, desc: 'Type: pdf|jpg|png|tif'
         requires :data, type: String, desc: 'Boleto data as a stringified json'
@@ -39,7 +39,9 @@ POST /boleto/multi
 POST /remessa
         requires :bank, type: String, desc: 'Bank'
         requires :type, type: String, desc: 'Type: cnab400|cnab240'
-        requires :data, type: File, desc: 'json of the list of pagamentos'
+        requires :data, type: File, desc: 'json with the remessa fields, including a "pagamentos" list'
+        # Obs: cada banco e cada formato (cnab400|cnab240) exige campos próprios,
+        # veja os exemplos abaixo e a documentação da BRCobranca.
 
 # Transformar um arquivo de Retorno CNAB 240 ou CNAB 400 em JSON:
 POST /retorno
@@ -48,9 +50,14 @@ POST /retorno
         requires :data, type: File, desc: 'txt of the retorno file'
 ```
 
-Nota: os campos datas devem estar no formato YYYY/MM/DD
+Nota: os campos datas devem estar no formato YYYY/MM/DD (para o endpoint /remessa
+também são aceitos os formatos de data aceitos pela Ruby "Date.parse", como "Thu, 15 Jun 2017").
 
-O API está documentado com mais detalhes no código aqui: https://github.com/akretion/boleto_cnab_api/blob/master/lib/boleto_api.rb
+Os campos de Boleto estão listados aqui: https://github.com/kivanio/brcobranca/blob/master/lib/brcobranca/boleto/base.rb
+Os campos genéricos de Remessa estão listados aqui: https://github.com/kivanio/brcobranca/blob/master/lib/brcobranca/remessa/base.rb
+Os campos de Retorno devolvidos em JSON estão listados aqui: https://github.com/kivanio/brcobranca/blob/master/lib/brcobranca/retorno/base.rb
+
+A API está documentada com mais detalhes no código aqui: https://github.com/akretion/boleto_cnab_api/blob/master/lib/boleto_api.rb
 
 # Como rodar o micro-serviço
 
@@ -62,7 +69,40 @@ docker run -p 9292:9292 ghcr.io/akretion/boleto_cnab_api
 
 ## Bash
 
-Por exemplo, para imprimir uma lista de Boletos é preciso criar um arquivo temporario com os Boletos em formato JSON e depois fazer um POST do arquivo:
+Os exemplos abaixo usam os mesmos dados da suíte de testes oficial da BRCobranca
+(https://github.com/kivanio/brcobranca/tree/master/spec) e são exatamente os testes
+executados no CI deste projeto (https://github.com/akretion/boleto_cnab_api/blob/master/test/curl_tests.sh).
+
+Por exemplo, para validar os dados de um Boleto do Itaú:
+```bash
+curl -G localhost:9292/api/boleto/validate \
+  --data-urlencode 'bank=itau' \
+  --data-urlencode 'data={"valor":5.0,"cedente":"Kivanio Barbosa","documento_cedente":"12345678912","sacado":"Claudio Pozzebom","sacado_documento":"12345678900","agencia":"0810","conta_corrente":"53678","convenio":12387,"nosso_numero":"12345678","data_vencimento":"2026/12/31"}'
+# => true
+```
+
+Para obter o nosso_numero formatado de um Boleto do Itaú:
+```bash
+curl -G localhost:9292/api/boleto/nosso_numero \
+  --data-urlencode 'bank=itau' \
+  --data-urlencode 'data={"valor":5.0,"cedente":"Kivanio Barbosa","documento_cedente":"12345678912","sacado":"Claudio Pozzebom","sacado_documento":"12345678900","agencia":"0810","conta_corrente":"53678","convenio":12387,"nosso_numero":"12345678"}'
+# => "175/12345678-4"
+```
+
+Para imprimir um único Boleto (do Itaú em PDF ou da Caixa em PNG):
+```bash
+curl -G localhost:9292/api/boleto \
+  --data-urlencode 'bank=itau' --data-urlencode 'type=pdf' \
+  --data-urlencode 'data={"valor":5.0,"cedente":"Kivanio Barbosa","documento_cedente":"12345678912","sacado":"Claudio Pozzebom","sacado_documento":"12345678900","agencia":"0810","conta_corrente":"53678","convenio":12387,"nosso_numero":"12345678"}' \
+  > /tmp/boleto_itau.pdf
+
+curl -G localhost:9292/api/boleto \
+  --data-urlencode 'bank=caixa' --data-urlencode 'type=png' \
+  --data-urlencode 'data={"valor":10.00,"cedente":"PREFEITURA MUNICIPAL DE VILHENA","documento_cedente":"04092706000181","sacado":"João Paulo Barbosa","sacado_documento":"77777777777","agencia":"1825","conta_corrente":"0000528","convenio":"245274","nosso_numero":"000000000000001"}' \
+  > /tmp/boleto_caixa.png
+```
+
+Para imprimir uma lista de Boletos é preciso criar um arquivo temporário com os Boletos em formato JSON e depois fazer um POST do arquivo:
 ```bash
 echo '[{"valor":5.0,"cedente":"Kivanio Barbosa","documento_cedente":"12345678912","sacado":"Claudio Pozzebom",
 "sacado_documento":"12345678900","agencia":"0810","conta_corrente":"53678","convenio":12387,"nosso_numero":"12345678","bank":"itau"},
@@ -73,17 +113,91 @@ curl -X POST -F type=pdf -F 'data=@/tmp/boletos_data.json' localhost:9292/api/bo
 ```
 Você pode então conferir os Boletos gerados no arquivo ```/tmp/boletos.pdf```
 
+Para gerir um arquivo de Remessa CNAB 400 do Itaú:
+```bash
+echo '{"carteira": "123","agencia": "1234","conta_corrente": "12345","digito_conta": "1","empresa_mae": "SOCIEDADE BRASILEIRA DE ZOOLOGIA LTDA","documento_cedente": "12345678910",
+"pagamentos": [{"valor": 199.9,"data_vencimento": "2026/06/15","nosso_numero": 123,"documento": 6969,"documento_sacado": "12345678901",
+"nome_sacado": "PABLO DIEGO JOSÉ FRANCISCO DE PAULA JUAN NEPOMUCENO MARÍA DE LOS REMEDIOS CIPRIANO DE LA SANTÍSSIMA TRINIDAD RUIZ Y PICASSO",
+"endereco_sacado": "RUA RIO GRANDE DO SUL São paulo Minas caçapa da silva junior","bairro_sacado": "São josé dos quatro apostolos magros",
+"cep_sacado": "12345678","cidade_sacado": "Santa rita de cássia maria da silva","uf_sacado": "SP"}]}' > /tmp/remessa_data.json
+curl -X POST -F type=cnab400 -F bank=itau -F 'data=@/tmp/remessa_data.json' localhost:9292/api/remessa > /tmp/remessa_cnab400.rem
+head -c 120 /tmp/remessa_cnab400.rem
+# => 01REMESSA01COBRANCA...
+```
+Para o formato CNAB 240 os campos de conta mudam um pouco (sem "digito_conta", com "sequencial_remessa" e "carteira") e os pagamentos exigem campos como "numero" e "codigo_baixa", por exemplo:
+```bash
+echo '{"empresa_mae": "EMPRESA TESTE LTDA","documento_cedente": "28254225000193","agencia": "1234","conta_corrente": "12345","carteira": "175","sequencial_remessa": "1",
+"pagamentos": [{"valor": 123.45,"data_vencimento": "2026/06/15","nosso_numero": 12345678,"documento": 9999,"documento_sacado": "12345678901",
+"nome_sacado": "PABLO DIEGO JOSÉ FRANCISCO DE PAULA JUAN NEPOMUCENO MARÍA DE LOS REMEDIOS CIPRIANO DE LA SANTÍSSIMA TRINIDAD RUIZ Y PICASSO",
+"endereco_sacado": "RUA RIO GRANDE DO SUL São paulo Minas caçapa da silva junior","bairro_sacado": "São josé dos quatro apostolos magros",
+"cep_sacado": "12345678","cidade_sacado": "Santa rita de cássia maria da silva","uf_sacado": "SP","numero": "123","codigo_baixa": "3","dias_baixa": "0"}]}' > /tmp/remessa_data_cnab240.json
+curl -X POST -F type=cnab240 -F bank=itau -F 'data=@/tmp/remessa_data_cnab240.json' localhost:9292/api/remessa > /tmp/remessa_cnab240.rem
+```
+
+Para ler um arquivo de Retorno CNAB 400 do Itaú:
+```bash
+wget -O /tmp/CNAB400ITAU.RET https://raw.githubusercontent.com/kivanio/brcobranca/master/spec/arquivos/CNAB400ITAU.RET
+curl -X POST -F type=cnab400 -F bank=itau -F 'data=@/tmp/CNAB400ITAU.RET' localhost:9292/api/retorno
+# => [{"codigo_registro":"1","codigo_ocorrencia":"06","nosso_numero":"00000011","valor_recebido":"0000000003790",...}, ...]
+```
+
 ## Python
 
+```python
+import json
+import requests
+
+base_url = "http://localhost:9292/api"
+
+# validar os dados de um Boleto
+boleto_data = {
+    "valor": 5.0,
+    "cedente": "Kivanio Barbosa",
+    "documento_cedente": "12345678912",
+    "sacado": "Claudio Pozzebom",
+    "sacado_documento": "12345678900",
+    "agencia": "0810",
+    "conta_corrente": "53678",
+    "convenio": 12387,
+    "nosso_numero": "12345678",
+}
+response = requests.get(
+    f"{base_url}/boleto/validate",
+    params={"bank": "itau", "data": json.dumps(boleto_data)},
+)
+assert response.json() is True
+
+# imprimir o Boleto em PDF
+response = requests.get(
+    f"{base_url}/boleto",
+    params={"bank": "itau", "type": "pdf", "data": json.dumps(boleto_data)},
+)
+with open("/tmp/boleto.pdf", "wb") as f:
+    f.write(response.content)
 ```
-TODO
-```
-(Ver os exemplos nos módulos Odoo: https://github.com/OCA/l10n-brazil/tree/14.0/l10n_br_account_payment_brcobranca)
+(Ver os exemplos completos nos módulos Odoo: https://github.com/OCA/l10n-brazil/tree/14.0/l10n_br_account_payment_brcobranca)
 
 ## Java
 
 ```
 TODO (contribuições bem vindas)
+```
+
+# Testes
+
+O CI (https://github.com/akretion/boleto_cnab_api/blob/master/.github/workflows/ci.yml) constrói a imagem Docker, inicia o micro-serviço e roda contra ele uma suíte de testes "curl" (https://github.com/akretion/boleto_cnab_api/blob/master/test/curl_tests.sh) que cobre todos os endpoints da API: validação de Boleto, geração do nosso_numero, impressão de Boleto único e em lote (PDF/PNG), geração de Remessa CNAB 400 e CNAB 240 e leitura de Retorno CNAB 400. Os dados usados são os mesmos da suíte oficial da BRCobranca, então valores como o nosso_numero esperado ou o tamanho das linhas CNAB são verificados contra os valores esperados.
+
+Para rodar os testes localmente contra um micro-serviço já em execução (por exemplo com ```docker run -p 9292:9292 ghcr.io/akretion/boleto_cnab_api```):
+
+```bash
+test/curl_tests.sh http://localhost:9292
+```
+
+Ou via pytest, que também constrói a imagem e inicia o container antes dos testes curl (requer Docker, pytest e requests):
+
+```bash
+pip install pytest requests
+pytest -v test/test_run.py
 ```
 
 ## Testar alterações na imagem sem necessidade de commit
