@@ -4,6 +4,18 @@ require 'grape'
 
 module BoletoApi
 
+  # Requested "type" param -> proper HTTP content type / file extension
+  MIME_TYPES = {
+    'pdf' => 'application/pdf',
+    'jpg' => 'image/jpeg',
+    'png' => 'image/png',
+    'tif' => 'image/tiff'
+  }.freeze
+
+  def self.mime_type(type)
+    MIME_TYPES.fetch(type, "application/octet-stream")
+  end
+
   def self.get_boleto(bank, values)
    clazz = Object.const_get("Brcobranca::Boleto::#{bank.camelize}")
    date_fields = %w[data_documento data_vencimento data_processamento]
@@ -79,7 +91,7 @@ module BoletoApi
         values = JSON.parse(params[:data])
         boleto = BoletoApi.get_boleto(params[:bank], values)
         if boleto.valid?
-          content_type "application/#{params[:type]}"
+          content_type BoletoApi.mime_type(params[:type])
           header['Content-Disposition'] = "attachment; filename=boleto-#{params[:bank]}.#{params[:type]}"
           env['api.format'] = :binary
           boleto.send("to_#{params[:type]}".to_sym)
@@ -112,7 +124,7 @@ module BoletoApi
           end
         end
         if errors.empty?
-          content_type "application/#{params[:type]}"
+          content_type BoletoApi.mime_type(params[:type])
           header['Content-Disposition'] = "attachment; filename=boletos-#{params[:bank]}.#{params[:type]}"
           env['api.format'] = :binary
           Brcobranca::Boleto::Base.lote(boletos, formato: params[:type].to_sym)

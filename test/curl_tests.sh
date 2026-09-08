@@ -19,10 +19,14 @@ trap 'rm -rf "$WORK"' EXIT
 
 check() {
     local desc="$1"; shift
-    if "$@" >/dev/null 2>&1; then
+    local out
+    if out=$("$@" 2>&1); then
         echo "PASS: $desc"
     else
         echo "FAIL: $desc"
+        if [ -n "$out" ]; then
+            printf '%s\n' "$out" | sed 's/^/      /'
+        fi
         FAILURES=$((FAILURES + 1))
     fi
 }
@@ -51,11 +55,12 @@ VALIDATE=$(curl -sS -G "$API/boleto/validate" --data-urlencode "bank=itau" --dat
 check_eq "validate returns true for valid itau boleto" "true" "$VALIDATE"
 
 # /api/boleto/validate: invalid data -> 400 + error messages
+# (agencia and nosso_numero are presence-validated by Brcobranca::Boleto::Base)
 HTTP_CODE=$(curl -sS -o "$WORK/invalid.json" -w '%{http_code}' -G "$API/boleto/validate" \
     --data-urlencode 'bank=itau' \
-    --data-urlencode 'data={"valor":0.0,"cedente":"","documento_cedente":"12345678912","sacado":"Claudio Pozzebom","sacado_documento":"12345678900","agencia":"0810","conta_corrente":"53678","convenio":12387,"nosso_numero":"12345678"}')
-check_eq "validate returns HTTP 400 for invalid boleto (empty cedente)" "400" "$HTTP_CODE"
-check "validate error body mentions cedente" grep -qi cedente "$WORK/invalid.json"
+    --data-urlencode 'data={"valor":0.0,"cedente":"Kivanio Barbosa","documento_cedente":"12345678912","sacado":"Claudio Pozzebom","sacado_documento":"12345678900","agencia":"","conta_corrente":"53678","convenio":12387,"nosso_numero":""}')
+check_eq "validate returns HTTP 400 for invalid boleto (blank agencia/nosso_numero)" "400" "$HTTP_CODE"
+check "validate error body mentions the invalid fields" bash -c 'grep -qi "agencia\|nosso" "$WORK/invalid.json" || { cat "$WORK/invalid.json"; exit 1; }'
 
 # /api/boleto/nosso_numero: upstream spec expects 175/12345678-4
 # (carteira 175 default; formula: carteira/nosso_numero-nosso_numero_dv)
@@ -138,10 +143,15 @@ check "remessa cnab240 itau has 240-char lines with CRLF endings" bash -c 'test 
 
 echo "== Retorno =="
 # Fixture from https://github.com/kivanio/brcobranca/blob/master/spec/arquivos/CNAB400ITAU.RET
+# (upstream spec: 53 payments, first one with nosso_numero '00000011', agencia_com_dv
+# '0730', cedente_com_dv '035110', valor_recebido '0000000003790', codigo_ocorrencia '06')
 curl -sS -o "$WORK/CNAB400ITAU.RET" https://raw.githubusercontent.com/kivanio/brcobranca/master/spec/arquivos/CNAB400ITAU.RET
-RETORNO=$(curl -sS -X POST -F type=cnab400 -F bank=itau -F "data=@$WORK/CNAB400ITAU.RET" "$API/retorno")
-check "retorno cnab400 itau returns 53 pagamentos (header line ignored)" bash -c "printf '%s' '$RETORNO' | jq -e 'length == 53' >/dev/null"
-check "retorno cnab400 itau first pagamento fields (per upstream spec)" bash -c "printf '%s' '$RETORNO' | jq -e '(.[0].nosso_numero == \"00000011\") and (.[0].agencia_com_dv == \"0730\") and (.[0].cedente_com_dv == \"035110\") and (.[0].valor_recebido == \"0000000003790\") and (.[0].codigo_ocorrencia == \"06\")' >/dev/null"
+HTTP_CODE=$(curl -sS -o "$WORK/retorno.json" -w '%{http_code}' -X POST -F type=cnab400 -F bank=itau -F "data=@$WORK/CNAB400ITAU.RET" "$API/retorno")
+check_eq "retorno cnab400 itau replies HTTP 200" "200" "$HTTP_CODE"
+check "retorno cnab400 itau returns 53 pagamentos (header line ignored)" \
+    bash -c 'jq -e "type == \"array\" and length == 53" "$WORK/retorno.json" || { head -c 2000 "$WORK/retorno.json"; exit 1; }'
+check "retorno cnab400 itau first pagamento fields (per upstream spec)" \
+    bash -c 'jq -e "(.[0].nosso_numero == \"00000011\") and (.[0].agencia_com_dv == \"0730\") and (.[0].cedente_com_dv == \"035110\") and (.[0].valor_recebido == \"0000000003790\") and (.[0].codigo_ocorrencia == \"06\")" "$WORK/retorno.json" || { head -c 2000 "$WORK/retorno.json"; exit 1; }'
 
 echo
 if [ "$FAILURES" -eq 0 ]; then
