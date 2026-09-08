@@ -194,7 +194,7 @@ module BoletoApi
         pagamentos.map! do |p|
           Hash[RETORNO_FIELDS.map{|sym| [sym, p.send(sym)]}]
         end
-        JSON.generate(pagamentos)
+        pagamentos
       end
     end
   end

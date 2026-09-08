@@ -55,12 +55,13 @@ VALIDATE=$(curl -sS -G "$API/boleto/validate" --data-urlencode "bank=itau" --dat
 check_eq "validate returns true for valid itau boleto" "true" "$VALIDATE"
 
 # /api/boleto/validate: invalid data -> 400 + error messages
-# (agencia and nosso_numero are presence-validated by Brcobranca::Boleto::Base)
+# 5-digit agencia is the upstream spec's own invalid case ("Agencia deve ter
+# 4 dígitos."); blank values would NOT fail because brcobranca left-pads them
 HTTP_CODE=$(curl -sS -o "$WORK/invalid.json" -w '%{http_code}' -G "$API/boleto/validate" \
     --data-urlencode 'bank=itau' \
-    --data-urlencode 'data={"valor":0.0,"cedente":"Kivanio Barbosa","documento_cedente":"12345678912","sacado":"Claudio Pozzebom","sacado_documento":"12345678900","agencia":"","conta_corrente":"53678","convenio":12387,"nosso_numero":""}')
-check_eq "validate returns HTTP 400 for invalid boleto (blank agencia/nosso_numero)" "400" "$HTTP_CODE"
-check "validate error body mentions the invalid fields" bash -c 'grep -qi "agencia\|nosso" "$WORK/invalid.json" || { cat "$WORK/invalid.json"; exit 1; }'
+    --data-urlencode 'data={"valor":0.0,"cedente":"Kivanio Barbosa","documento_cedente":"12345678912","sacado":"Claudio Pozzebom","sacado_documento":"12345678900","agencia":"12345","conta_corrente":"53678","convenio":12387,"nosso_numero":"12345678"}')
+check_eq "validate returns HTTP 400 for invalid boleto (5-digit agencia, per upstream spec)" "400" "$HTTP_CODE"
+check "validate error body mentions the invalid fields" bash -c 'grep -qi "agencia" "$WORK/invalid.json" || { cat "$WORK/invalid.json"; exit 1; }'
 
 # /api/boleto/nosso_numero: upstream spec expects 175/12345678-4
 # (carteira 175 default; formula: carteira/nosso_numero-nosso_numero_dv)
@@ -147,7 +148,7 @@ echo "== Retorno =="
 # '0730', cedente_com_dv '035110', valor_recebido '0000000003790', codigo_ocorrencia '06')
 curl -sS -o "$WORK/CNAB400ITAU.RET" https://raw.githubusercontent.com/kivanio/brcobranca/master/spec/arquivos/CNAB400ITAU.RET
 HTTP_CODE=$(curl -sS -o "$WORK/retorno.json" -w '%{http_code}' -X POST -F type=cnab400 -F bank=itau -F "data=@$WORK/CNAB400ITAU.RET" "$API/retorno")
-check_eq "retorno cnab400 itau replies HTTP 200" "200" "$HTTP_CODE"
+check_eq "retorno cnab400 itau replies HTTP 201" "201" "$HTTP_CODE"
 check "retorno cnab400 itau returns 53 pagamentos (header line ignored)" \
     bash -c 'jq -e "type == \"array\" and length == 53" "$WORK/retorno.json" || { head -c 2000 "$WORK/retorno.json"; exit 1; }'
 check "retorno cnab400 itau first pagamento fields (per upstream spec)" \
