@@ -33,11 +33,19 @@ def test_run():
         result = subprocess.run(
             cmd, check=False, capture_output=True, text=True, timeout=300
         )
-        print(result.stdout)
+        # always echo the curl suite output, pass or fail
+        print("\n" + result.stdout)
+        if result.stderr:
+            print(result.stderr)
         assert result.returncode == 0, (
             "curl smoke tests failed:\n" + result.stdout + "\n" + result.stderr
         )
     finally:
+        cmd = ["docker", "logs", "boleto_cnab_api"]
+        result = subprocess.run(cmd, check=False, capture_output=True, text=True)
+        print("\n--- boleto_cnab_api container logs ---")
+        print(result.stdout)
+        print(result.stderr)
         cmd = ["docker", "rm", "-f", "boleto_cnab_api"]
         result = subprocess.run(cmd, check=False, capture_output=True, text=True)
         assert result.returncode == 0, result.stderr + "\n" + result.stdout
