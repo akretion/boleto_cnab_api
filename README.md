@@ -79,6 +79,32 @@ O CI verifica que esse arquivo nunca fica desatualizado em relação ao código.
 docker run -p 9292:9292 ghcr.io/akretion/boleto_cnab_api
 ```
 
+# Autenticação (opcional)
+
+Por padrão o serviço não exige autenticação (adequado para rodar na mesma rede do ERP). Para proteger uma instância exposta, defina a variável de ambiente ```API_KEYS``` com uma ou mais chaves separadas por vírgula:
+
+```bash
+docker run -p 9292:9292 -e API_KEYS="chave-da-empresa-a,chave-da-empresa-b" ghcr.io/akretion/boleto_cnab_api
+```
+
+Com ```API_KEYS``` definida, todos os endpoints (```/api/*``` e ```/docs```) exigem a chave, que pode ser passada de duas formas:
+
+1. **Header ```X-Api-Key```** — mesmo header usado pelas API keys do AWS API Gateway. Um cliente configurado assim (por exemplo o Odoo, módulo ```l10n_br_account_payment_brcobranca```) funciona sem alteração tanto contra um container auto-hospedado quanto contra um futuro serviço hospedado na AWS:
+
+```bash
+curl -G localhost:9292/api/boleto/validate -H 'X-Api-Key: chave-da-empresa-a' \
+  --data-urlencode 'bank=itau' --data-urlencode 'data={...}'
+```
+
+2. **HTTP Basic auth** — qualquer usuário, a chave como senha (prático para curl e navegadores, por exemplo ao abrir a documentação em ```/docs```):
+
+```bash
+curl -G localhost:9292/api/boleto/validate -u qualquer-usuario:chave-da-empresa-a \
+  --data-urlencode 'bank=itau' --data-urlencode 'data={...}'
+```
+
+Sem chave ou com chave inválida a resposta é ```401 {"error":"missing or invalid API key"}```. A comparação das chaves é feita em tempo constante.
+
 # Exemplos de como consumir o serviço usando sua linguagem preferida:
 
 ## Bash
