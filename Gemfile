@@ -2,6 +2,7 @@ source 'https://rubygems.org'
 
 gem 'brcobranca', git: 'https://github.com/kivanio/brcobranca.git'
 gem 'grape'
+gem 'grape-swagger'
 gem 'puma'
 gem 'base64'
 gem 'mutex_m'

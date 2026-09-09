@@ -40,6 +40,27 @@ def test_run():
         assert result.returncode == 0, (
             "curl smoke tests failed:\n" + result.stdout + "\n" + result.stderr
         )
+
+        # The committed docs/openapi.json must match the live API definition
+        # (regenerate with: bundle exec ruby scripts/generate_openapi.rb)
+        cmd = [
+            "docker", "exec", "-u", "root", "boleto_cnab_api",
+            "bundle", "exec", "ruby", "scripts/generate_openapi.rb",
+        ]
+        result = subprocess.run(cmd, check=False, capture_output=True, text=True)
+        assert result.returncode == 0, result.stderr + "\n" + result.stdout
+        cmd = [
+            "docker", "cp",
+            "boleto_cnab_api:/usr/src/app/docs/openapi.json",
+            "/tmp/openapi_live.json",
+        ]
+        result = subprocess.run(cmd, check=False, capture_output=True, text=True)
+        assert result.returncode == 0, result.stderr + "\n" + result.stdout
+        committed = Path(__file__).parent.parent / "docs" / "openapi.json"
+        assert committed.read_text() == Path("/tmp/openapi_live.json").read_text(), (
+            "docs/openapi.json is stale; regenerate it with "
+            "'bundle exec ruby scripts/generate_openapi.rb'"
+        )
     finally:
         cmd = ["docker", "logs", "boleto_cnab_api"]
         result = subprocess.run(cmd, check=False, capture_output=True, text=True)
