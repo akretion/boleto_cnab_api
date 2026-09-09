@@ -1,0 +1,39 @@
+# AWS Lambda container image for the boleto_cnab_api Grape app.
+#
+# This builds on the official Lambda Ruby base image (Amazon Linux 2023),
+# which bundles the Runtime Interface Client (RIC). The RIC loads
+# lib/lambda_function.rb (via the RUBYLIB env) and calls
+# `lambda_function.lambda_handler` for every API Gateway event.
+#
+# Build:
+#   docker build -f Dockerfile.lambda -t boleto-cnab-lambda .
+#
+# Local test with the bundled Runtime Interface Emulator (no AWS needed):
+#   docker run -p 9000:8080 boleto-cnab-lambda
+#   python3 test/lambda_rie_smoke.py            # or curl the RIE endpoint
+FROM public.ecr.aws/lambda/ruby:3.3
+
+# System deps:
+#   gcc make  — native gems (fast_blank, nio4r, rghost_barcode, bigdecimal)
+#   git       — brcobranca is installed from its git source
+#   ghostscript — PDF/barcode rendering at runtime (rghost)
+#   wget      — used by scripts/lambda_local_test.rb to fetch the retorno fixture
+RUN dnf install -y --setopt=install_weak_deps=False \
+        gcc make git ghostscript wget \
+    && dnf clean all
+
+# Install gems into the task root (kept apart from the runtime's system gems).
+COPY Gemfile Gemfile.lock ${LAMBDA_TASK_ROOT}/
+RUN bundle config set --local path 'vendor/bundle' \
+    && bundle install \
+    && rm -rf vendor/bundle/ruby/*/cache \
+              vendor/bundle/ruby/*/bundler/gems/*/.git \
+              vendor/bundle/ruby/*/bundler/gems/*/docs \
+              vendor/bundle/ruby/*/bundler/gems/*/spec
+
+COPY . ${LAMBDA_TASK_ROOT}/
+
+# The RIC resolves the handler module from lib/ (where lambda_function.rb and
+# boleto_api.rb live) and invokes the entry point named in CMD.
+ENV RUBYLIB=${LAMBDA_TASK_ROOT}/lib
+CMD [ "lambda_function.lambda_handler" ]

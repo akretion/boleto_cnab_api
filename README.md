@@ -105,6 +105,33 @@ curl -G localhost:9292/api/boleto/validate -u qualquer-usuario:chave-da-empresa-
 
 Sem chave ou com chave inválida a resposta é ```401 {"error":"missing or invalid API key"}```. A comparação das chaves é feita em tempo constante.
 
+# AWS Lambda (serverless)
+
+Além do container Docker tradicional, o projeto pode ser empacotado como uma **imagem de container AWS Lambda** (```Dockerfile.lambda```), usando o mesmo código Grape sem alteração. O "handler" (```lib/lambda_function.rb```) traduz o evento do API Gateway (proxy integration) para um ambiente Rack, chama a aplicação e devolve a resposta no formato esperado pelo API Gateway — respostas binárias (PDF/PNG/remessa) saem em base64 com ```isBase64Encoded: true```.
+
+Construir a imagem:
+
+```bash
+docker build -f Dockerfile.lambda -t boleto-cnab-lambda .
+```
+
+Testar localmente com o Runtime Interface Emulator (RIE), que já vem na imagem base — sem precisar de uma conta AWS:
+
+```bash
+docker run -p 9000:8080 boleto-cnab-lambda
+python3 test/lambda_rie_smoke.py
+```
+
+Ou exercitar todos os endpoints direto contra o handler (sem Docker), reutilizando os mesmos fixtures da BRCobranca:
+
+```bash
+bundle exec ruby scripts/lambda_local_test.rb
+```
+
+O CI constrói a imagem Lambda, roda o harness completo dentro dela e faz um smoke test pelo RIE, garantindo que o empacotamento nunca quebre.
+
+**Deploy na AWS (resumo):** a imagem é publicada no ECR e referenciada pela função Lambda; o API Gateway (REST API, para suportar usage plans/API keys) roteia para ela. A autenticação/throttling/quota por cliente ficam no API Gateway (usage plans), fora do código — e o header ```X-Api-Key``` aceito pela autenticação local (seção acima) é o mesmo usado pelas API keys do API Gateway, então um cliente funciona nos dois mundos. Limites a considerar: payload de até ~6 MB (10 MB para a resposta) no API Gateway e timeout de 29 s, então lotes grandes de ```/boleto/multi``` devem respeitar esses tetos.
+
 # Exemplos de como consumir o serviço usando sua linguagem preferida:
 
 ## Bash
