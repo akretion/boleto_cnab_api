@@ -1,0 +1,297 @@
+{
+  "info": {
+    "title": "Boleto CNAB API",
+    "description": "REST micro-service for Brazilian boletos and CNAB 240/400 remessa/retorno files, powered by BRCobranca (https://github.com/kivanio/brcobranca). Source: https://github.com/akretion/boleto_cnab_api",
+    "contact": {
+      "name": "Akretion",
+      "url": "https://github.com/akretion/boleto_cnab_api"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://github.com/akretion/boleto_cnab_api/blob/master/LICENSE"
+    },
+    "version": "v1"
+  },
+  "swagger": "2.0",
+  "produces": [
+    "application/json"
+  ],
+  "tags": [
+    {
+      "name": "boleto",
+      "description": "Operations about boletos"
+    },
+    {
+      "name": "remessa",
+      "description": "Operations about remessas"
+    },
+    {
+      "name": "retorno",
+      "description": "Operations about retornos"
+    }
+  ],
+  "paths": {
+    "/api/boleto/validate": {
+      "get": {
+        "description": "Validate boleto data",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "bank",
+            "description": "Bank",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "data",
+            "description": "Boleto data as a stringified json",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Validate boleto data"
+          }
+        },
+        "tags": [
+          "boleto"
+        ],
+        "operationId": "getApiBoletoValidate"
+      }
+    },
+    "/api/boleto/nosso_numero": {
+      "get": {
+        "description": "Generates boleto nosso_numero",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "bank",
+            "description": "Bank",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "data",
+            "description": "Boleto data as a stringified json",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generates boleto nosso_numero"
+          }
+        },
+        "tags": [
+          "boleto"
+        ],
+        "operationId": "getApiBoletoNossoNumero"
+      }
+    },
+    "/api/boleto": {
+      "get": {
+        "description": "Return a boleto image or pdf",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "bank",
+            "description": "Bank",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "description": "Type: pdf|jpg|png|tif",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "data",
+            "description": "Boleto data as a stringified json",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a boleto image or pdf"
+          }
+        },
+        "tags": [
+          "boleto"
+        ],
+        "operationId": "getApiBoleto"
+      }
+    },
+    "/api/boleto/multi": {
+      "post": {
+        "description": "Return the image or pdf of a collection of boletos",
+        "produces": [
+          "application/json"
+        ],
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "postApiBoletoMulti",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/postApiBoletoMulti"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Return the image or pdf of a collection of boletos"
+          }
+        },
+        "tags": [
+          "boleto"
+        ],
+        "operationId": "postApiBoletoMulti"
+      }
+    },
+    "/api/remessa": {
+      "post": {
+        "description": "Generate a CNAB 240/400 remessa file",
+        "produces": [
+          "application/json"
+        ],
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "postApiRemessa",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/postApiRemessa"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Generate a CNAB 240/400 remessa file"
+          }
+        },
+        "tags": [
+          "remessa"
+        ],
+        "operationId": "postApiRemessa"
+      }
+    },
+    "/api/retorno": {
+      "post": {
+        "description": "Parse a CNAB 240/400 retorno file into JSON",
+        "produces": [
+          "application/json"
+        ],
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "postApiRetorno",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/postApiRetorno"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Parse a CNAB 240/400 retorno file into JSON"
+          }
+        },
+        "tags": [
+          "retorno"
+        ],
+        "operationId": "postApiRetorno"
+      }
+    }
+  },
+  "definitions": {
+    "postApiBoletoMulti": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Type: pdf|jpg|png|tif"
+        },
+        "data": {
+          "type": "file",
+          "description": "json of the list of boletos, including the \"bank\" key"
+        }
+      },
+      "required": [
+        "type",
+        "data"
+      ],
+      "description": "Return the image or pdf of a collection of boletos"
+    },
+    "postApiRemessa": {
+      "type": "object",
+      "properties": {
+        "bank": {
+          "type": "string",
+          "description": "Bank"
+        },
+        "type": {
+          "type": "string",
+          "description": "Type: cnab400|cnab240"
+        },
+        "data": {
+          "type": "file",
+          "description": "json of the list of pagamentos"
+        }
+      },
+      "required": [
+        "bank",
+        "type",
+        "data"
+      ],
+      "description": "Generate a CNAB 240/400 remessa file"
+    },
+    "postApiRetorno": {
+      "type": "object",
+      "properties": {
+        "bank": {
+          "type": "string",
+          "description": "Bank"
+        },
+        "type": {
+          "type": "string",
+          "description": "Type: cnab400|cnab240"
+        },
+        "data": {
+          "type": "file",
+          "description": "txt of the retorno file"
+        }
+      },
+      "required": [
+        "bank",
+        "type",
+        "data"
+      ],
+      "description": "Parse a CNAB 240/400 retorno file into JSON"
+    }
+  }
+}

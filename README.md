@@ -59,6 +59,20 @@ Os campos de Retorno devolvidos em JSON estão listados aqui: https://github.com
 
 A API está documentada com mais detalhes no código aqui: https://github.com/akretion/boleto_cnab_api/blob/master/lib/boleto_api.rb
 
+# Documentação interativa (OpenAPI)
+
+A API expõe a sua especificação OpenAPI (Swagger 2.0) em ```/api/swagger_doc```, gerada pelo [grape-swagger](https://github.com/ruby-grape/grape-swagger) a partir do próprio código, e serve uma documentação interativa com [Scalar](https://scalar.com) em ```/docs``` — suba o container e abra http://localhost:9292/docs para explorar e testar os endpoints (o "Try it" funciona por ser a mesma origem da API).
+
+A mesma documentação é publicada no GitHub Pages: https://akretion.github.io/boleto_cnab_api/
+
+O arquivo ```docs/openapi.json``` servido em ```/docs``` é um snapshot gerado a partir da API, sem precisar subir o servidor:
+
+```bash
+bundle exec ruby scripts/generate_openapi.rb
+```
+
+O CI verifica que esse arquivo nunca fica desatualizado em relação ao código.
+
 # Como rodar o micro-serviço
 
 ```bash

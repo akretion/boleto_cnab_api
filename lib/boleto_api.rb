@@ -1,5 +1,6 @@
 require 'brcobranca'
 require 'grape'
+require 'grape-swagger'
 
 
 module BoletoApi
@@ -78,7 +79,7 @@ module BoletoApi
         end
       end
 
-      desc 'Return a bolato image or pdf'
+      desc 'Return a boleto image or pdf'
       # example of valid Itau boleto with data from https://github.com/kivanio/brcobranca/blob/master/spec/brcobranca/boleto/itau_spec.rb
       # http://localhost:9292/api/boleto?type=pdf&bank=itau&data=%7B%22valor%22:0.0,%22cedente%22:%22Kivanio%20Barbosa%22,%22documento_cedente%22:%2212345678912%22,%22sacado%22:%22Claudio%20Pozzebom%22,%22sacado_documento%22:%2212345678900%22,%22agencia%22:%220810%22,%22conta_corrente%22:%2253678%22,%22convenio%22:12387,%22numero_documento%22:%2212345678%22%7D
       # boleto fields are listed here: https://github.com/kivanio/brcobranca/blob/master/lib/brcobranca/boleto/base.rb
@@ -135,6 +136,7 @@ module BoletoApi
     end
 
     resource :remessa do
+      desc 'Generate a CNAB 240/400 remessa file'
       # example with data from https://github.com/kivanio/brcobranca/blob/master/spec/brcobranca/remessa/cnab400/itau_spec.rb
       # echo '{"carteira": "123","agencia": "1234","conta_corrente": "12345","digito_conta": "1","empresa_mae": "SOCIEDADE BRASILEIRA DE ZOOLOGIA LTDA","documento_cedente": "12345678910","pagamentos":[{"valor": 199.9,"data_vencimento": "Thu, 15 Jun 2017","nosso_numero": 123,"documento_sacado": "12345678901","nome_sacado": "PABLO DIEGO JOSÉ FRANCISCO DE PAULA JUAN NEPOMUCENO MARÍA DE LOS REMEDIOS CIPRIANO DE LA SANTÍSSIMA TRINIDAD RUIZ Y PICASSO","endereco_sacado": "RUA RIO GRANDE DO SUL São paulo Minas caçapa da silva junior","bairro_sacado": "São josé dos quatro apostolos magros","cep_sacado": "12345678","cidade_sacado": "Santa rita de cássia maria da silva","uf_sacado": "SP"}]}' > /tmp/remessa_data.json
       # curl -X POST -F type=cnab400 -F bank=itau -F 'data=@/tmp/remessa_data.json' localhost:9292/api/remessa
@@ -178,6 +180,7 @@ module BoletoApi
     # to avoid returning Ruby objects, we will read the payments fields from https://github.com/kivanio/brcobranca/blob/master/lib/brcobranca/retorno/base.rb
     RETORNO_FIELDS = [:codigo_registro,:codigo_ocorrencia,:data_ocorrencia,:agencia_com_dv,:agencia_sem_dv,:cedente_com_dv,:convenio,:nosso_numero,:codigo_ocorrencia,:data_ocorrencia,:tipo_cobranca,:tipo_cobranca_anterior,:natureza_recebimento,:carteira_variacao,:desconto,:iof,:carteira,:comando,:data_liquidacao,:data_vencimento,:valor_titulo,:banco_recebedor,:agencia_recebedora_com_dv,:especie_documento,:data_ocorrencia,:data_credito,:valor_tarifa,:outras_despesas,:juros_desconto,:iof_desconto,:valor_abatimento,:desconto_concedito,:valor_recebido,:juros_mora,:outros_recebimento,:abatimento_nao_aproveitado,:valor_lancamento,:indicativo_lancamento,:indicador_valor,:valor_ajuste,:sequencial,:arquivo,:outros_recebimento,:motivo_ocorrencia,:documento_numero]
     resource :retorno do
+      desc 'Parse a CNAB 240/400 retorno file into JSON'
       # example:
       # wget -O /tmp/CNAB400ITAU.RET https://raw.githubusercontent.com/kivanio/brcobranca/master/spec/arquivos/CNAB400ITAU.RET
       # curl -X POST -F type=cnab400 -F bank=itau -F 'data=@/tmp/CNAB400ITAU.RET.txt' localhost:9292/api/retorno
@@ -197,5 +200,19 @@ module BoletoApi
         pagamentos
       end
     end
+
+    add_swagger_documentation(
+      info: {
+        title: 'Boleto CNAB API',
+        description: 'REST micro-service for Brazilian boletos and CNAB 240/400 remessa/retorno files, powered by BRCobranca (https://github.com/kivanio/brcobranca). Source: https://github.com/akretion/boleto_cnab_api',
+        contact_name: 'Akretion',
+        contact_url: 'https://github.com/akretion/boleto_cnab_api',
+        license: 'MIT',
+        license_url: 'https://github.com/akretion/boleto_cnab_api/blob/master/LICENSE'
+      },
+      doc_version: 'v1',
+      mount_path: '/swagger_doc',
+      hide_documentation_path: true
+    )
   end
 end
