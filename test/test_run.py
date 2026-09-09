@@ -61,6 +61,60 @@ def test_run():
             "docs/openapi.json is stale; regenerate it with "
             "'bundle exec ruby scripts/generate_openapi.rb'"
         )
+
+        # Optional API key auth (API_KEYS env var): a protected instance must
+        # reject anonymous/wrong-key requests with 401 and accept the
+        # AWS-API-Gateway-compatible X-Api-Key header or HTTP Basic auth
+        # (password = key). See lib/api_key_auth.rb.
+        cmd = ["docker", "rm", "-f", "boleto_cnab_api"]
+        subprocess.run(cmd, check=False, capture_output=True, text=True)
+        cmd = [
+            "docker", "run", "-d", "-p", "9292:9292",
+            "-e", "API_KEYS=test-key-1,test-key-2",
+            "--name=boleto_cnab_api", "akretion/boleto_cnab_api",
+        ]
+        result = subprocess.run(cmd, check=False, capture_output=True, text=True)
+        assert result.returncode == 0, result.stderr + "\n" + result.stdout
+        time.sleep(5)
+
+        base = "http://localhost:9292"
+        params = {
+            "bank": "itau",
+            "data": '{"valor":5.0,"cedente":"Kivanio Barbosa",'
+                    '"documento_cedente":"12345678912","sacado":"Claudio Pozzebom",'
+                    '"sacado_documento":"12345678900","agencia":"0810",'
+                    '"conta_corrente":"53678","convenio":12387,'
+                    '"nosso_numero":"12345678","data_vencimento":"2026/12/31"}',
+        }
+
+        response = requests.get(f"{base}/api/boleto/validate", params=params)
+        assert response.status_code == 401, response.status_code
+
+        response = requests.get(
+            f"{base}/api/boleto/validate",
+            params=params,
+            headers={"X-Api-Key": "wrong-key"},
+        )
+        assert response.status_code == 401, response.status_code
+
+        response = requests.get(
+            f"{base}/api/boleto/validate",
+            params=params,
+            headers={"X-Api-Key": "test-key-1"},
+        )
+        assert response.status_code == 200 and response.json() is True, (
+            response.status_code
+        )
+
+        response = requests.get(
+            f"{base}/api/boleto/validate", params=params, auth=("odoo", "test-key-2")
+        )
+        assert response.status_code == 200 and response.json() is True, (
+            response.status_code
+        )
+
+        response = requests.get(f"{base}/docs")
+        assert response.status_code == 401, response.status_code
     finally:
         cmd = ["docker", "logs", "boleto_cnab_api"]
         result = subprocess.run(cmd, check=False, capture_output=True, text=True)
