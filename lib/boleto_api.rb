@@ -35,6 +35,36 @@ module BoletoApi
    Brcobranca::Remessa::Pagamento.new(values)
   end
 
+  # Campos que a classe aceita receber no initialize, lidos do proprio
+  # Brcobranca (assim a lista acompanha a gem, incluindo os campos novos do
+  # Split Payment IBS/CBS).
+  def self.campos_aceitos(clazz)
+    (@campos_aceitos ||= {})[clazz] ||= clazz.instance_methods
+                                              .map(&:to_s)
+                                              .grep(/\A[a-z_][a-z0-9_]*=\z/)
+                                              .map { |campo| campo.delete_suffix('=') }
+                                              .sort
+                                              .freeze
+  end
+
+  # Chaves do payload que a classe nao sabe receber. O initialize da gem faz
+  # `send :"#{campo}=", valor` para cada chave, entao uma chave desconhecida
+  # derruba a requisicao com NoMethodError (HTTP 500).
+  def self.chaves_desconhecidas(clazz, values)
+    values.keys.map(&:to_s) - campos_aceitos(clazz)
+  end
+
+  # Corpo do erro 400 de campo desconhecido. A chave `erro` e o texto que o Odoo
+  # mostra ao usuario (account_payment_order.py usa essa chave e cai no corpo
+  # cru quando a resposta nao e JSON), por isso ela nomeia o BRCobranca: e ele
+  # que nao conhece o campo recebido, o payload e montado pelo ERP.
+  def self.erro_campos_desconhecidos(desconhecidas)
+    {
+      'campos_desconhecidos' => desconhecidas,
+      'erro' => "Campos desconhecidos no BRCobranca: #{desconhecidas.join(', ')}"
+    }
+  end
+
   class Server < Grape::API
     version 'v1', using: :header, vendor: 'Akretion'
     format :json
@@ -151,8 +181,25 @@ module BoletoApi
       end
       post do
         values = JSON.parse(params[:data][:tempfile].read())
+        clazz = Object.const_get("Brcobranca::Remessa::#{params[:type].camelize}::#{params[:bank].camelize}")
+
+        # Campo que a classe da gem nao declara nao e ignorado: o initialize
+        # faz `send :"#{campo}=", valor` e o request inteiro morre com
+        # NoMethodError (HTTP 500). Recuse o payload nomeando as chaves, nos
+        # dois niveis (remessa e pagamentos): descartar em silencio geraria um
+        # arquivo sem o dado que o ERP pensa ter mandado.
+        desconhecidas = BoletoApi.chaves_desconhecidas(clazz, values) - ['pagamentos']
+        (values['pagamentos'] || []).each do |pagamento_values|
+          desconhecidas |= BoletoApi.chaves_desconhecidas(
+            Brcobranca::Remessa::Pagamento, pagamento_values
+          )
+        end
+        unless desconhecidas.empty?
+          error!(BoletoApi.erro_campos_desconhecidos(desconhecidas), 400)
+        end
+
         pagamentos = []
-      	errors = []
+        errors = []
         values['pagamentos'].each do |pagamento_values|
           pagamento = BoletoApi.get_pagamento(pagamento_values)
           if pagamento.valid?
@@ -163,7 +210,6 @@ module BoletoApi
         end
         if errors.empty?
           values[:pagamentos] = pagamentos
-          clazz = Object.const_get("Brcobranca::Remessa::#{params[:type].camelize}::#{params[:bank].camelize}")
           remessa = clazz.new(values)
           if remessa.valid?
             env['api.format'] = :binary
