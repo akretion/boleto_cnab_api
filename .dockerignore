@@ -1,3 +1,19 @@
 # Backup files
 *~
 *.swp
+.git
+.github
+*.un~
+Dockerfile~
+README.md
+test_run.py
+
+# Runtime-only image: the RSpec suite, the curl smoke tests and the OpenAPI
+# generator are development artefacts (scripts/ is only needed at build/dev
+# time; docs/ IS kept because config.ru serves it at /docs).
+.rspec
+spec
+test
+# Erro no CI impede remoção da pasta scripts
+# FAILED test/test_run.py::test_run - AssertionError: /usr/bin/ruby: No such file or directory -- scripts/generate_openapi.rb (LoadError)
+# scripts
