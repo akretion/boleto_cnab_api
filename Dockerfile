@@ -4,28 +4,25 @@ LABEL org.opencontainers.image.authors="raphael.valyi@akretion.com"
 WORKDIR /usr/src/app
 COPY Gemfile Gemfile.lock ./
 
+# A gem BRCobranca vem do repositório agregado ./vendor/brcobranca (Gemfile
+# usa `source :path`), então ele precisa existir antes do bundle install.
+# O .dockerignore já remove .git/, docs/ e spec/ desse checkout (~90MB).
+COPY vendor/brcobranca/ ./vendor/brcobranca/
+
 # Gems + their executables go to a self-contained dir (copied wholesale to
 # the runtime stage). BUNDLE_PATH also keeps the gem bin dir inside it, so
 # no /usr/bin executables need copying.
 ENV BUNDLE_PATH=/usr/local/bundle
 
 # Build-only toolchain: compilers (native gems: fast_blank, nio4r,
-# rghost_barcode, bigdecimal), ruby headers and git (brcobranca comes from a
-# git source). None of these ship in the runtime stage.
-#
-# Post-install cleanup:
-# - bundler runs git-sourced gems (brcobranca) straight from the checkout in
-#   bundler/gems/<name>-<rev>/, so the checkout must stay — but its .git
-#   history (41MB), docs/ (47MB) and spec/ (1MB) are dead weight at runtime;
-#   only lib/ (13MB) is loaded.
-RUN apk add --no-cache build-base ruby-dev git \
+# rghost_barcode, bigdecimal) and ruby headers. None of these ship in the
+# runtime stage. git is no longer needed as a build dependency: BRCobranca is
+# a local path source now, not a git source (see docs/AGREGACAO_BRCOBRANCA.md).
+RUN apk add --no-cache build-base ruby-dev \
     && gem install bundler:4.0.19 --no-document \
     && bundle config set --global frozen 1 \
     && bundle install \
-    && rm -rf /usr/local/bundle/ruby/*/cache \
-          /usr/local/bundle/ruby/*/bundler/gems/*/.git \
-          /usr/local/bundle/ruby/*/bundler/gems/*/docs \
-          /usr/local/bundle/ruby/*/bundler/gems/*/spec
+    && rm -rf /usr/local/bundle/ruby/*/cache
 
 COPY . .
 

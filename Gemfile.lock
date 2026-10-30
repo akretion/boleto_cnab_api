@@ -1,6 +1,5 @@
-GIT
-  remote: https://github.com/kivanio/brcobranca.git
-  revision: 9e28ee273444a098b88aa1742452e28d8d189de1
+PATH
+  remote: vendor/brcobranca
   specs:
     brcobranca (13.0.0)
       fast_blank

@@ -1,3 +1,20 @@
 # Backup files
 *~
 *.swp
+.git
+.github
+*.un~
+Dockerfile~
+README.md
+test_run.py
+
+# vendor/brcobranca é o checkout git agregado (gitaggregate.yaml): só lib/ e o
+# gemspec são usados pelo bundler (source :path). Histórico, docs e specs ficam
+# fora do contexto de build (~90MB a menos no contexto/imagem).
+vendor/brcobranca/.git
+vendor/brcobranca/docs
+vendor/brcobranca/spec
+vendor/brcobranca/.github
+vendor/brcobranca/.claude
+vendor/brcobranca/yarn.lock
+vendor/brcobranca/CLAUDE.md

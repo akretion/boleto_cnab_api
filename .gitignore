@@ -2,3 +2,6 @@
 *~
 *.swp
 
+# Repositório agregado da BRCobranca: gerado localmente por
+# `gitaggregate -c gitaggregate.yaml` (não versionar ~60MB de checkout).
+vendor/

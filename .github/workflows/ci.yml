@@ -13,6 +13,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      # vendor/brcobranca é gerado (gitignored): agrega o upstream kivanio com
+      # o fork akretion antes do build. Ver docs/AGREGACAO_BRCOBRANCA.md.
+      - name: Install git-aggregator
+        run: pip install git-aggregator
+      - name: Aggregate BRCobranca (kivanio master + akretion IMP-split_payment_ibs_cbs)
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          gitaggregate -c gitaggregate.yaml --no-color
+          git -C vendor/brcobranca log --oneline -3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Login to ghcr.io

@@ -1,6 +1,13 @@
 source 'https://rubygems.org'
 
-gem 'brcobranca', git: 'https://github.com/kivanio/brcobranca.git'
+# A gem BRCobranca vem do repositório AGREGADO em vendor/brcobranca, gerado
+# por gitaggregate.yaml (acsone/git-aggregator) a partir de:
+#   - upstream  https://github.com/kivanio/brcobranca.git  branch master
+#   - fork      https://github.com/akretion/brcobranca.git branch IMP-split_payment_ibs_cbs
+# Regenerar com: gitaggregate -c gitaggregate.yaml
+# Ver docs/AGREGACAO_BRCOBRANCA.md.
+gem 'brcobranca', path: 'vendor/brcobranca'
+
 gem 'grape'
 gem 'grape-swagger'
 gem 'puma'
