@@ -101,6 +101,13 @@ EOF
 HTTP_TYPE=$(curl -sS -o "$WORK/boletos.pdf" -w '%{content_type}' -X POST -F type=pdf -F "data=@$WORK/boletos_data.json" "$API/boleto/multi")
 check_eq "multi boletos are served as PDF" "application/pdf" "$HTTP_TYPE"
 check "multi boletos PDF is a non-empty PDF (magic bytes)" bash -c "head -c 4 '$WORK/boletos.pdf' | grep -q '%PDF' && test \$(stat -c %s '$WORK/boletos.pdf') -gt 10000"
+# ...and the accented sacado name reaches the printed document as UTF-8 (the
+# payload above sends "João Paulo Barbosa"); magic bytes would not catch mojibake.
+if pdf_text "$WORK/boletos.pdf" "$WORK/boletos.txt"; then
+    check "multi boletos PDF keeps the accented name (João)" grep -q "João Paulo Barbosa" "$WORK/boletos.txt"
+else
+    echo "SKIP: PDF text assertions (pdftotext/gs ausente)"
+fi
 
 echo "== Remessa =="
 # Data from https://github.com/kivanio/brcobranca/blob/master/spec/brcobranca/remessa/cnab400/itau_spec.rb
@@ -165,6 +172,15 @@ case "$HTTP_CODE" in
       f="$WORK/remessa_cnab240.rem"
       test "$(tr -cd "\r" < "$f" | wc -c)" = "$(tr -cd "\n" < "$f" | wc -c)" &&
         tr -d "\r" < "$f" | awk "length(\$0) != 240 {bad=1} END {exit bad}"
+    '
+    # UTF-8 end to end: o payload traz "JOSÉ", "São paulo", "cássia" e a remessa
+    # tem de sair transliterada em ASCII (BRCobranca#remove_accents). Largura de
+    # linha sobrevive a um mojibake, então isto tem de ser assertado no CONTEUDO.
+    check "remessa cnab240 itau transliterates accents to plain ASCII" bash -c '
+      f="$WORK/remessa_cnab240.rem"
+      ! tr -d "\r" < "$f" | LC_ALL=C grep -q "[^ -~]" &&
+        grep -q "PABLO DIEGO JOSE" "$f" && grep -q "SAO PAULO" "$f" &&
+        grep -q "SAO JOSE DOS QU" "$f" && grep -q "SANTA RITA DE C" "$f"
     '
     ;;
   *)
