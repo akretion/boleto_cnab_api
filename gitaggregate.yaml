@@ -1,0 +1,27 @@
+# Agregação da gem BRCobranca (acsone/git-aggregator).
+#
+# Gera ./vendor/brcobranca: um único repositório git cujo branch `master`
+# contém o fork akretion (IMP-split_payment_ibs_cbs) concatenado por cima do
+# upstream kivanio (master). Rodar com:
+#
+#   gitaggregate -c gitaggregate.yaml            # atualiza / recria
+#   gitaggregate -c gitaggregate.yaml --no-color # sem cores (CI/logs)
+#
+# ATENÇÃO: o branch alvo PRECISA ser o PRIMEIRO item de `merges`. O
+# git-aggregator faz `git reset --hard` para o primeiro merge e depois
+# `git pull` dos demais; se `kivanio master` não estiver na lista, o resultado
+# é apenas o fork e os commits novos do upstream são perdidos.
+#
+# Quando o upstream avançar, basta rodar de novo: o git-aggregator faz fetch
+# do kivanio e um merge de verdade (commit de merge) do fork em cima do novo
+# master. Conflitos: o comando sai != 0 com o repo em estado de merge; resolva
+# dentro de ./vendor/brcobranca, commite e rode a agregação outra vez.
+# O merge exige identidade git configurada (user.name/user.email).
+./vendor/brcobranca:
+  remotes:
+    kivanio: https://github.com/kivanio/brcobranca.git
+    akretion: https://github.com/akretion/brcobranca.git
+  target: kivanio master
+  merges:
+    - kivanio master
+    - akretion IMP-split_payment_ibs_cbs

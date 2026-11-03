@@ -224,7 +224,19 @@ module BoletoApi
     end
 
     # to avoid returning Ruby objects, we will read the payments fields from https://github.com/kivanio/brcobranca/blob/master/lib/brcobranca/retorno/base.rb
-    RETORNO_FIELDS = [:codigo_registro,:codigo_ocorrencia,:data_ocorrencia,:agencia_com_dv,:agencia_sem_dv,:cedente_com_dv,:convenio,:nosso_numero,:codigo_ocorrencia,:data_ocorrencia,:tipo_cobranca,:tipo_cobranca_anterior,:natureza_recebimento,:carteira_variacao,:desconto,:iof,:carteira,:comando,:data_liquidacao,:data_vencimento,:valor_titulo,:banco_recebedor,:agencia_recebedora_com_dv,:especie_documento,:data_ocorrencia,:data_credito,:valor_tarifa,:outras_despesas,:juros_desconto,:iof_desconto,:valor_abatimento,:desconto_concedito,:valor_recebido,:juros_mora,:outros_recebimento,:abatimento_nao_aproveitado,:valor_lancamento,:indicativo_lancamento,:indicador_valor,:valor_ajuste,:sequencial,:arquivo,:outros_recebimento,:motivo_ocorrencia,:documento_numero]
+        RETORNO_FIELDS = [:codigo_registro,:codigo_ocorrencia,:data_ocorrencia,:agencia_com_dv,:agencia_sem_dv,:cedente_com_dv,:convenio,:nosso_numero,:codigo_ocorrencia,:data_ocorrencia,:tipo_cobranca,:tipo_cobranca_anterior,:natureza_recebimento,:carteira_variacao,:desconto,:iof,:carteira,:comando,:data_liquidacao,:data_vencimento,:valor_titulo,:banco_recebedor,:agencia_recebedora_com_dv,:especie_documento,:data_ocorrencia,:data_credito,:valor_tarifa,:outras_despesas,:juros_desconto,:iof_desconto,:valor_abatimento,:desconto_concedito,:valor_recebido,:juros_mora,:outros_recebimento,:abatimento_nao_aproveitado,:valor_lancamento,:indicativo_lancamento,:indicador_valor,:valor_ajuste,:sequencial,:arquivo,:outros_recebimento,:motivo_ocorrencia,:documento_numero,
+                      # Split Payment (IBS/CBS): registros opcionais Segmento X-03
+                      # (dados fiscais e CBS/IBS) e X-04 (valores da liquidacao) do
+                      # Layout Padrao Febraban 240 posicoes V11.0, veja
+                      # https://github.com/kivanio/brcobranca/blob/master/lib/brcobranca/retorno/cnab240/segmento_split_payment.rb
+                      :identificacao_registro_opcional,:documento_fiscal,
+                      :valor_cbs_informado,:valor_ibs_informado,
+                      :valor_cbs_corrigido,:valor_ibs_corrigido,
+                      :valor_cbs_em_aberto,:valor_ibs_em_aberto,
+                      :valor_cbs_segregado,:valor_ibs_segregado,
+                      :id_split,:tipo_id_split,
+                      :valor_pago_ausente_split,
+                      :valor_repassado_novo_titular,:valor_residual]
     resource :retorno do
       desc 'Parse a CNAB 240/400 retorno file into JSON'
       # example:
@@ -241,7 +253,10 @@ module BoletoApi
         clazz = Object.const_get("Brcobranca::Retorno::#{params[:type].camelize}::#{params[:bank].camelize}")
         pagamentos = clazz.load_lines(data)
         pagamentos.map! do |p|
-          Hash[RETORNO_FIELDS.map{|sym| [sym, p.send(sym)]}]
+          # A gem instalada pode ser anterior ao layout V11.0 (imagem antiga):
+          # nesse caso o campo nao existe no objeto de retorno e sai como null,
+          # em vez de derrubar o endpoint.
+          Hash[RETORNO_FIELDS.map { |sym| [sym, p.respond_to?(sym) ? p.send(sym) : nil] }]
         end
         pagamentos
       end
