@@ -1,6 +1,6 @@
 source 'https://rubygems.org'
 
-gem 'brcobranca', git: 'https://github.com/kivanio/brcobranca.git'
+gem 'brcobranca', git: 'https://github.com/akretion/brcobranca.git'
 gem 'grape'
 gem 'grape-swagger'
 gem 'puma'
